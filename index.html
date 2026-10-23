@@ -7,7 +7,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="description" content="蔡氏宗谱 · 树状 / 吊线 / 五服 三视图族谱">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23B23A2E'/><text x='16' y='24' font-size='21' text-anchor='middle' fill='%23FFF8EE' font-family='serif'>蔡</text></svg>">
-<title>蔡氏宗谱 · 清雅版原型</title>
+<title>蔡氏宗谱 · 六代世系</title>
 <style>
   :root{
     --paper:#F6F1E7;        /* 宣纸底 */
@@ -172,7 +172,7 @@
 <header>
   <div class="brand">
     <div class="seal" id="sealTxt">蔡氏<br>宗谱</div>
-    <div><h1 id="titleTxt">蔡氏宗谱</h1><small>CAI · 清雅版原型</small></div>
+    <div><h1 id="titleTxt">蔡氏宗谱</h1><small>CAI · 六代世系</small></div>
   </div>
   <div class="tabs" id="tabs">
     <div class="tab active" data-view="tree">树状</div>
@@ -267,14 +267,28 @@
 const byId = {};
 DATA.members.forEach(m=>byId[m.id]=m);
 function computeGen(){
-  function genOf(m,seen){ if(m.gen) return m.gen; if(!m.fatherId){m.gen=1;return 1;} if(seen.has(m.id))return 1; seen.add(m.id);
-    const f=byId[m.fatherId]; m.gen=(f?genOf(f,seen):0)+1; return m.gen; }
-  DATA.members.forEach(m=>genOf(m,new Set()));
+  // 代数一律从始祖 BFS 推：外姓后人（张/王/巫/陈…）的 fatherId 可能是外姓女婿、
+  // 本身没有父母记录，若按 fatherId 单链推会全部错算成第 2 代。
+  const rootM=DATA.members.find(m=>!m.fatherId&&!m.motherId&&m.clan==='cai')||{id:'I500004'};
+  DATA.members.forEach(m=>m.gen=0);
+  const q=[[rootM.id,1]];
+  while(q.length){ const [id,g]=q.shift(); const m=byId[id]; if(!m)continue;
+    if(m.gen&&m.gen<=g) continue; m.gen=g;
+    DATA.members.forEach(c=>{ if(c.fatherId===id||c.motherId===id) q.push([c.id,g+1]); }); }
+  // 配偶随伴侣的代数
+  for(let pass=0;pass<2;pass++){
+    DATA.members.forEach(m=>{ if(m.gen)return;
+      const p=DATA.members.find(x=>(x.spouses||[]).some(sp=>sp.id===m.id)&&x.gen);
+      if(p) m.gen=p.gen; });
+  }
+  DATA.members.forEach(m=>{ if(!m.gen) m.gen=1; });
 }
 computeGen();
 function isAlive(m){ return !(m.death || m.deceased); }
 const ROOT = (DATA.members.find(m=>!m.fatherId && !m.orphan && m.gender==='M')||{id:'I500004'}).id;
-function childrenOf(id){ return DATA.members.filter(m=>m.fatherId===id); }
+/* 子女＝「父是谁」或「母是谁」都算：蔡氏女儿招婿/外嫁后，子女的 fatherId 是外姓丈夫，
+   只看 fatherId 会让整支后人挂空、上不了图。 */
+function childrenOf(id){ return DATA.members.filter(m=>m.fatherId===id||m.motherId===id); }
 function spousesOf(id){ const m=byId[id];
   // 原配在前、继配在后：详情卡「直系家庭」与图中重叠顺序都按这个次序
   return (m.spouses||[]).map(s=>({ref:byId[s.id],type:s.type}))
@@ -339,80 +353,96 @@ function coupleNode(id,x,y,w,h,opt={},side='left'){
   svg+=nodeG(id,x,y,w,h,opt);
   return svg;
 }
-/* ============ 多妻：每位妻子（粉色）绘在其所出子女组的中心 =============
-   仍在蔡氏本人之后（z 序在下）、与本人所在列重叠一半；
-   配合「妻子 → 自己的子女」拉线，形成「与一任妻子一棵树」。 */
+/* ============ 多妻：每位妻子（粉色）绘在本人右侧、居于其所出子女组的中心 =====
+   本人（蔡氏）始终在最左/最前，妻子压住本人右半格，姓名移向可见一侧；
+   配合「妻子 → 自己的子女」拉线，形成「与一任妻子一棵树」。
+   无出（没有子女组）的妻子按顺序排在本人右上方，避免与有出的妻子重叠。 */
 function coupleNodeGrouped(id,x,y,w,h,opt={}){
-  let svg='';
-  (byId[id]._groupInfo||[]).forEach(g=>{
-    const momId=byId[g.ids[0]]?byId[g.ids[0]].motherId:null;
-    if(momId&&byId[momId]) svg+=nodeG(momId, x-w*0.5, (g.top+g.bot)/2, w, h, {fill:'#F3D3CD'});
+  const m=byId[id]; let svg='';
+  const groups=m._groupInfo||[];
+  const used=new Set();
+  groups.forEach(g=>{
+    const c0=byId[g.ids[0]];
+    const momId=c0?c0.motherId:null;
+    if(momId&&byId[momId]){ used.add(momId); svg+=nodeG(momId, x+w*0.5, (g.top+g.bot)/2, w, h, {fill:'#F3D3CD', textX:0.72}); }
   });
+  // 无出的配偶：依次排在本人右上方
+  let slot=y-h-18;
+  spousesOf(id).forEach(s=>{ if(!s.ref||used.has(s.ref.id))return;
+    used.add(s.ref.id); svg+=nodeG(s.ref.id, x+w*0.5, slot, w, h, {fill:'#F3D3CD', textX:0.72}); slot-=(h+16); });
   svg+=nodeG(id,x,y,w,h,opt);
   return svg;
 }
-/* ============ 树状视图（横向，根在左；按母亲分房，同代同列） ============ */
+/* ============ 树状视图（横向，根在左；按母亲分房，同代同列） ============
+   全员上图：不再只画姓蔡的，蔡氏女儿/儿子所出的外姓后代同样展开到本人，
+   所有人的配偶（含外姓后代之配偶）一并画出 —— 结果与人员目录人数一致。 */
 function renderTree(){
-  const roots=DATA.members.filter(m=>!m.fatherId && m.gender==='M' && !m.orphan);
-  const xGap=250, yGap=82, w=150, h=52;
-  const xM=140;                 // 左边距：容纳「本人左侧重叠一半的妻子」框，防止被 viewBox 裁掉
-  let cursor=40;
-  const placed=[];
-  function setPos(id,depth,y){ const m=byId[id]; m._x=xM+depth*xGap; m._y=y; if(placed.indexOf(id)<0)placed.push(id); }
-  function layout(id, depth){
-    const kids=childrenOf(id);
-    if(kids.length===0){ const y=cursor; cursor+=yGap; setPos(id,depth,y); return y; }
+  const rootId=(function(){ const r=DATA.members.find(m=>!m.fatherId&&m.gender==='M'&&m.clan==='cai'&&m.spouses&&m.spouses.length); return r?r.id:ROOT; })();
+  const xGap=310, yGap=80, w=150, h=52;
+  const xM=70;                  // 左边距：本人永远在最左，妻子压住其右半格
+  let cursor=44;
+  const placed=[], seen=new Set();
+  function setPos(id,depth,y){ const m=byId[id]; if(!m)return; m._x=xM+depth*xGap; m._y=y;
+    if(!seen.has(id)){ seen.add(id); placed.push(id); } }
+  function layout(id,depth){
+    const kids=childrenOf(id).filter(k=>!seen.has(k.id));
+    if(!kids.length){ const y=cursor; cursor+=yGap; setPos(id,depth,y); return y; }
     // 按母亲分房：同一父亲、不同妻子的子女分成若干组（蔡儒合即吴纯卿房 / 黄秀卿房）
     const groups=new Map();
     kids.forEach(c=>{ const k=c.motherId||'__none__'; if(!groups.has(k))groups.set(k,[]); groups.get(k).push(c); });
     let order=[...groups.values()];
-    // 多妻时按「原配 → 继配」排序，保证原配房在上
     const wifeRank=mid=>{ const sp=(byId[id].spouses||[]).find(s=>s.id===mid); return sp?(sp.type==='原配'?0:sp.type==='继配'?1:2):2; };
     if(order.length>1) order.sort((a,b)=>wifeRank(a[0].motherId)-wifeRank(b[0].motherId));
     let firstY=Infinity,lastY=-Infinity; const groupInfo=[];
     order.forEach(grp=>{ let gTop=Infinity,gBot=-Infinity;
-      // 主干（含女儿）继续向下展开；蔡氏血脉但随外姓者（viaMother）画出即止，不再外扩到外姓后代
-      grp.forEach(c=>{ const branches=(c.clan==='cai' && !c.viaMother && childrenOf(c.id).length>0);
-        let cy; if(branches) cy=layout(c.id,depth+1); else { cy=cursor; cursor+=yGap; setPos(c.id,depth+1,cy); }
+      grp.forEach(c=>{ const sub=childrenOf(c.id).filter(k=>!seen.has(k.id));
+        let cy; if(sub.length) cy=layout(c.id,depth+1);
+        else { cy=cursor; cursor+=yGap; setPos(c.id,depth+1,cy); }
         firstY=Math.min(firstY,cy); lastY=Math.max(lastY,cy);
         gTop=Math.min(gTop,cy); gBot=Math.max(gBot,cy); });
       groupInfo.push({ids:grp.map(c=>c.id), top:gTop, bot:gBot}); });
     const y=(firstY+lastY)/2; setPos(id,depth,y); byId[id]._groupInfo=groupInfo; return y;
   }
-  roots.forEach(r=>layout(r.id,0));
+  layout(rootId,0);
   let links='',nodes='';
+  const childLinks=(fromX,fromY,ids)=>{
+    ids.forEach(cid=>{ const cc=byId[cid]; if(!cc||typeof cc._x!=='number')return;
+      links+=`<path class="link" d="M${fromX} ${fromY} C${fromX+55} ${fromY}, ${cc._x-55} ${cc._y+h/2}, ${cc._x} ${cc._y+h/2}"/>`; });
+  };
   placed.forEach(id=>{
     const m=byId[id]; const x=m._x,y=m._y;
-    const multi=m._groupInfo&&m._groupInfo.length>1;
-    if(multi){
-      // 多妻：由每位妻子向其所出子女拉线（一任妻子一棵树），不再从父亲直拉
-      m._groupInfo.forEach(g=>{
+    const groups=m._groupInfo||[];
+    const sps=spousesOf(id).filter(s=>s.ref);
+    const kidIds=groups.length?groups.flatMap(g=>g.ids):childrenOf(id).map(c=>c.id);
+    if(!sps.length){ nodes+=nodeG(id,x,y,w,h); childLinks(x+w,y+h/2,kidIds); return; }
+    if(groups.length>1){
+      // 多妻：每位妻子站在自己所出子女组的中心，只拉自己那一房的线
+      groups.forEach(g=>{ const c0=byId[g.ids[0]]; const momId=c0?c0.motherId:null;
         const wy=(g.top+g.bot)/2+h/2;
-        g.ids.forEach(cid=>{ const cc=byId[cid]; if(!cc||typeof cc._x!=='number')return;
-          links+=`<path class="link" d="M${x+w*0.5} ${wy} C${x+w*0.95} ${wy}, ${cc._x-w*0.5} ${cc._y+h/2}, ${cc._x} ${cc._y+h/2}"/>`; });
-      });
+        childLinks(x+w*1.5, wy, g.ids); });
       nodes+=coupleNodeGrouped(id,x,y,w,h,{});
     } else {
-      childrenOf(id).forEach(c=>{ const cc=byId[c.id]; if(typeof cc._x!=='number')return;
-        links+=`<path class="link" d="M${x+w} ${y+h/2} C${x+w+50} ${y+h/2}, ${cc._x-50} ${cc._y+h/2}, ${cc._x} ${cc._y+h/2}"/>`; });
-      nodes+=coupleNode(id,x,y,w,h,{},'left');
+      // 单妻（或只有一房）：妻子与本人同高，压在本人右半格
+      nodes+=coupleNode(id,x,y,w,h,{},'right');
+      childLinks(x+w*1.5, y+h/2, kidIds);
     }
   });
   // 多妻时标注每房所出（如儒合：吴纯卿房 / 黄秀卿房）
   let roomLabels='';
   placed.forEach(id=>{ const m=byId[id]; if(!m._groupInfo||m._groupInfo.length<=1)return;
     const childX=m._x+xGap;
-    m._groupInfo.forEach((g,gi)=>{ const midY=(g.top+g.bot)/2;
-      const momId=byId[g.ids[0]]?byId[g.ids[0]].motherId:null;
+    m._groupInfo.forEach(g=>{ const momId=byId[g.ids[0]]?byId[g.ids[0]].motherId:null;
       const momName=(momId&&byId[momId])?byId[momId].name.replace(/\s+$/,''):'妻';
       const label=`${momName} 所出 · ${g.ids.length} 人`;
       const lw=label.length*12+18; const cxL=childX+w/2;
       const ly=Math.max(14, g.top-30);
       roomLabels+=`<g><rect x="${cxL-lw/2}" y="${ly-13}" width="${lw}" height="26" rx="13" fill="#FBF1DC" stroke="#A9852F" stroke-width="1"/>`
         +`<text x="${cxL}" y="${ly+4}" text-anchor="middle" font-size="12" font-weight="700" fill="#8a6a1f">${label}</text></g>`; }); });
-  const vw=Math.max.apply(null,placed.map(id=>byId[id]._x))+w+260;
-  const vh=cursor+40;
+  const vw=Math.max.apply(null,placed.map(id=>byId[id]._x))+w+300;
+  const vh=Math.max(cursor+40, 600);
+  window.__treeAnchor={x:byId[rootId]._x, y:byId[rootId]._y};   // 初始视口对准始祖
   setSVG(placed, roomLabels+nodes, links, vw, vh);
+  window.__treeStats={nodes:placed.length,total:DATA.members.length};
 }
 /* ============ 吊线视图（纵向，代自上而下） ============ */
 function renderDiao(){
@@ -420,9 +450,13 @@ function renderDiao(){
   // xGap 需容纳「本人 + 两位妻子」：第一任重叠半格、第二任再后移一格，
   // w=140 时第二任妻子右缘 = x+0.5w+2w = x+350，故列距取 400 防止压到下一列
   const xGap=400,yGap=120,w=140,h=54; let order=0;
-  // 吊线谱画全部蔡氏主干（含女儿、含随外姓的蔡氏血脉），外姓姻亲仅以配偶身份出现
-  const drawn=DATA.members.filter(m=>m.clan==='cai' && !m.orphan);
-  const drawIds=new Set(drawn.map(m=>m.id));
+  // 吊线谱同样全员上图：蔡氏主干 + 女儿/儿子所出的外姓后人，
+  // 配偶（含外姓女婿/媳妇）以粉色配偶身份贴在本人右侧，不另占一列。
+  const rootId=(function(){ const r=DATA.members.find(m=>!m.fatherId&&!m.motherId&&m.clan==='cai'); return r?r.id:ROOT; })();
+  const primary=new Set(); (function w(id){ if(primary.has(id))return; primary.add(id);
+    DATA.members.forEach(c=>{ if(c.fatherId===id||c.motherId===id) w(c.id); }); })(rootId);
+  const drawn=DATA.members.filter(m=>primary.has(m.id));
+  const drawIds=primary;
   function assign(id){
     // 只给「主干」分配列号；随外姓的血脉末梢其子女是外姓，自然成为叶子
     const kids=childrenOf(id).filter(c=>drawIds.has(c.id));
@@ -446,6 +480,7 @@ function renderDiao(){
       links+=`<path class="link" d="M${x+w/2} ${y+h} L${x+w/2} ${y+h+22} L${cx+w/2} ${y+h+22} L${cx+w/2} ${cy}"/>`; });
     nodes+=coupleNode(m.id,x,y,w,h,{},'right');
   });
+  const r0=byId[rootId]; window.__diaoAnchor={x:(colX[Math.round(r0._ox)]||0)+w/2, y:40};
   setSVG(drawn.map(m=>m.id),nodes,links,totalW,yGap*maxGen+60);
 }
 /* ============ 五服视图（以选中人为中心） ============ */
@@ -517,6 +552,15 @@ function setSVG(ids,nodes,links,vw,vh,noZoom){
     if(noZoom){                       // 五服：整幅缩放并水平垂直居中（五服看的是格局，优先看全）；下限 0.45 保底可读
       const k=Math.min(1, Math.max(0.45, Math.min(W/(vw+80), H/(vh+60))));
       transform={x:Math.round(W/2-(vw/2)*k), y:Math.max(56, Math.round((H-vh*k)/2)), k};
+    } else if(view==='tree'&&window.__treeAnchor){
+      // 树有百余人、高达数千像素：初始把始祖（蔡儒合）放在画面左侧中部，
+      // 否则打开就落在某位祖先的子孙中间，看不到根。
+      const k=Math.min(1, Math.max(0.62, W/vw));
+      transform={x:40, y:Math.round(H/2-window.__treeAnchor.y*k), k};
+    } else if(view==='diao'&&window.__diaoAnchor){
+      // 吊线谱是一条长卷（百余人的叶子列排开上万像素）：初始视口对准始祖所在列
+      const k=Math.min(1, Math.max(0.6, W/vw));
+      transform={x:Math.round(W/2-window.__diaoAnchor.x*k), y:96, k};
     } else {
       transform={x:40, y:96, k:Math.min(1, Math.max(0.6, W/vw))};
     }
