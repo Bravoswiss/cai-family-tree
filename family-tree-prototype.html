@@ -76,6 +76,7 @@
   .node.hl rect{stroke:var(--seal);stroke-width:3;fill:#FCEEEC}
   .node text{font-family:inherit;pointer-events:none}
   .link{fill:none;stroke:var(--line);stroke-width:1.6}
+  .tie{fill:none;stroke:#D8BDB6;stroke-width:2;stroke-dasharray:5 5}
   .link.hl{stroke:var(--seal);stroke-width:2.6}
   .getip{position:absolute;left:16px;bottom:16px;background:rgba(251,248,241,.92);border:1px solid var(--line);
     border-radius:10px;padding:8px 12px;font-size:12px;color:var(--ink-soft);backdrop-filter:blur(4px);max-width:60%}
@@ -404,7 +405,7 @@ function renderTree(){
     const y=(firstY+lastY)/2; setPos(id,depth,y); byId[id]._groupInfo=groupInfo; return y;
   }
   layout(rootId,0);
-  let links='',nodes='';
+  let links='',nodes='',ties='';
   const childLinks=(fromX,fromY,ids)=>{
     ids.forEach(cid=>{ const cc=byId[cid]; if(!cc||typeof cc._x!=='number')return;
       links+=`<path class="link" d="M${fromX} ${fromY} C${fromX+55} ${fromY}, ${cc._x-55} ${cc._y+h/2}, ${cc._x} ${cc._y+h/2}"/>`; });
@@ -416,9 +417,10 @@ function renderTree(){
     const kidIds=groups.length?groups.flatMap(g=>g.ids):childrenOf(id).map(c=>c.id);
     if(!sps.length){ nodes+=nodeG(id,x,y,w,h); childLinks(x+w,y+h/2,kidIds); return; }
     if(groups.length>1){
-      // 多妻：每位妻子站在自己所出子女组的中心，只拉自己那一房的线
-      groups.forEach(g=>{ const c0=byId[g.ids[0]]; const momId=c0?c0.motherId:null;
-        const wy=(g.top+g.bot)/2+h/2;
+      // 多妻：每位妻子站在自己所出子女组的中心，只拉自己那一房的线；
+      // 另加一条竖直「婚姻线」把本人与每位妻子连起来（否则两位妻子离得远，本人看着像孤零零一个框）
+      groups.forEach(g=>{ const wy=(g.top+g.bot)/2+h/2;
+        if(Math.abs(wy-(y+h/2))>4) ties+=`<path class="tie" d="M${x+w*0.5} ${y+h/2} V${wy}"/>`;
         childLinks(x+w*1.5, wy, g.ids); });
       nodes+=coupleNodeGrouped(id,x,y,w,h,{});
     } else {
@@ -441,7 +443,7 @@ function renderTree(){
   const vw=Math.max.apply(null,placed.map(id=>byId[id]._x))+w+300;
   const vh=Math.max(cursor+40, 600);
   window.__treeAnchor={x:byId[rootId]._x, y:byId[rootId]._y};   // 初始视口对准始祖
-  setSVG(placed, roomLabels+nodes, links, vw, vh);
+  setSVG(placed, roomLabels+nodes, ties+links, vw, vh);
   window.__treeStats={nodes:placed.length,total:DATA.members.length};
 }
 /* ============ 吊线视图（纵向，代自上而下） ============ */
