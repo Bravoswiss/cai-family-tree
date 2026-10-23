@@ -1,0 +1,8 @@
+# 只发布站点必需文件；工具脚本与含个人信息的源数据（名单、覆盖层）不入库
+/*
+!/.gitignore
+!/index.html
+!/family-tree-prototype.html
+!/family-members.js
+!/family-data.js
+!/README.md

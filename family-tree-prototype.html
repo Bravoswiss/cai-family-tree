@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="蔡氏宗谱 · 树状 / 吊线 / 五服 三视图族谱">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23B23A2E'/><text x='16' y='24' font-size='21' text-anchor='middle' fill='%23FFF8EE' font-family='serif'>蔡</text></svg>">
+<title>蔡氏宗谱 · 清雅版原型</title>
+<style>
+  :root{
+    --paper:#F6F1E7;        /* 宣纸底 */
+    --paper-2:#EFE7D6;
+    --ink:#2A2622;          /* 墨色 */
+    --ink-soft:#6B6358;
+    --line:#C9BCA8;         /* 浅褐线 */
+    --seal:#B23A2E;         /* 印章朱红 */
+    --seal-soft:#D98B82;
+    --dai:#3E5C5A;          /* 黛青 */
+    --gold:#A9852F;
+    --card:#FBF8F1;
+    --shadow:0 6px 24px rgba(60,45,30,.12);
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;font-family:"Noto Serif SC","Songti SC","STSong","SimSun",serif;color:var(--ink);background:var(--paper);}
+  body{display:flex;flex-direction:column;overflow:hidden}
+  /* ===== Header ===== */
+  header{
+    flex:0 0 auto;display:flex;align-items:center;gap:14px;
+    padding:12px 20px;background:linear-gradient(180deg,#FBF8F1,#F1E9D8);
+    border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(60,45,30,.06);z-index:20;
+  }
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .seal{
+    width:38px;height:38px;border-radius:8px;background:var(--seal);color:#fff;
+    display:grid;place-items:center;font-weight:700;font-size:13px;line-height:1.05;text-align:center;
+    box-shadow:0 2px 6px rgba(178,58,46,.4);flex:0 0 auto;
+  }
+  .brand h1{font-size:18px;margin:0;font-weight:700;letter-spacing:1px;white-space:nowrap}
+  .brand small{display:block;font-size:11px;color:var(--ink-soft);font-weight:400;letter-spacing:2px}
+  .tabs{display:flex;gap:6px;margin-left:8px}
+  .tab{
+    padding:8px 16px;border:1px solid var(--line);background:var(--paper);border-radius:20px;
+    cursor:pointer;font-size:14px;color:var(--ink-soft);transition:.18s;user-select:none;white-space:nowrap;
+  }
+  .tab:hover{border-color:var(--seal-soft);color:var(--ink)}
+  .tab.active{background:var(--seal);color:#fff;border-color:var(--seal);box-shadow:0 3px 10px rgba(178,58,46,.3)}
+  .spacer{flex:1}
+  .search{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .search select,.search input{
+    font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:10px;background:var(--card);color:var(--ink);outline:none;
+  }
+  .search input{width:120px}
+  .search select:focus,.search input:focus{border-color:var(--dai)}
+  .btn{
+    font-family:inherit;font-size:13px;padding:8px 14px;border-radius:10px;cursor:pointer;border:1px solid var(--dai);
+    background:var(--dai);color:#fff;transition:.18s;white-space:nowrap;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent;color:var(--dai)}
+  .btn.seal{background:var(--seal);border-color:var(--seal)}
+  /* ===== Main ===== */
+  main{flex:1;position:relative;overflow:hidden;background:
+    radial-gradient(circle at 20% 18%,rgba(169,133,47,.05),transparent 40%),
+    radial-gradient(circle at 80% 82%,rgba(62,92,90,.05),transparent 40%),var(--paper);}
+  #stage{width:100%;height:100%;display:block;cursor:grab}
+  #stage:active{cursor:grabbing}
+  .node{cursor:pointer}
+  .node rect{transition:.15s}
+  .node:hover rect{filter:brightness(1.04);stroke-width:2.4}
+  .node.sel rect{stroke:var(--seal);stroke-width:3}
+  .node.dim{opacity:.18}
+  .node.hl rect{stroke:var(--seal);stroke-width:3;fill:#FCEEEC}
+  .node text{font-family:inherit;pointer-events:none}
+  .link{fill:none;stroke:var(--line);stroke-width:1.6}
+  .link.hl{stroke:var(--seal);stroke-width:2.6}
+  .getip{position:absolute;left:16px;bottom:16px;background:rgba(251,248,241,.92);border:1px solid var(--line);
+    border-radius:10px;padding:8px 12px;font-size:12px;color:var(--ink-soft);backdrop-filter:blur(4px);max-width:60%}
+  /* ===== Detail Panel ===== */
+  aside{
+    position:absolute;top:0;right:0;height:100%;width:360px;background:var(--card);border-left:1px solid var(--line);
+    box-shadow:var(--shadow);transform:translateX(105%);transition:.28s cubic-bezier(.4,0,.2,1);z-index:30;
+    display:flex;flex-direction:column;
+  }
+  aside.open{transform:translateX(0)}
+  .ph{display:flex;align-items:center;gap:12px;padding:18px 18px 14px;border-bottom:1px solid var(--line)}
+  .avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:26px;
+    background:var(--paper-2);border:2px solid var(--line);flex:0 0 auto}
+  .avatar.m{border-color:var(--ink);color:var(--ink)}
+  .avatar.f{border-color:var(--seal);color:var(--seal)}
+  .ph .name{font-size:22px;font-weight:700}
+  .ph .sub{font-size:12px;color:var(--ink-soft);margin-top:2px}
+  .ph .close{margin-left:auto;cursor:pointer;font-size:22px;color:var(--ink-soft);border:none;background:none}
+  .pbody{padding:14px 18px;overflow:auto;flex:1}
+  .badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .badge{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--paper)}
+  .badge.alive{background:#EAF3EF;border-color:var(--dai);color:var(--dai)}
+  .badge.dead{background:#F1EAE3;border-color:#B79B7C;color:#7a6450}
+  .badge.gen{background:#FBF1DC;border-color:var(--gold);color:#8a6a1f}
+  .block{margin-bottom:16px}
+  .block h3{font-size:13px;color:var(--dai);margin:0 0 8px;display:flex;align-items:center;gap:6px;
+    border-left:3px solid var(--seal);padding-left:8px;letter-spacing:1px}
+  .rel-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--paper);border:1px solid var(--line);
+    border-radius:10px;margin-bottom:6px;cursor:pointer;transition:.15s}
+  .rel-item:hover{border-color:var(--seal-soft);transform:translateX(2px)}
+  .rel-item .mini{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;flex:0 0 auto}
+  .rel-item .mini.m{background:#EDE7DC;color:var(--ink)}
+  .rel-item .mini.f{background:#F7E7E4;color:var(--seal)}
+  .rel-item .rn{font-size:14px}
+  .rel-item .rt{font-size:11px;color:var(--ink-soft);margin-left:auto}
+  .rel-item .tag{font-size:10px;background:var(--seal);color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px}
+  /* 分房小标题（如儒合两房：吴纯卿所出 / 黄秀卿所出） */
+  .roomh{font-size:12px;color:var(--ink-soft);margin:10px 0 5px;padding-left:2px;letter-spacing:.3px;border-top:1px dashed var(--line);padding-top:7px}
+  .roomh:first-child{margin-top:2px;border-top:0;padding-top:0}
+  .pacts{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .pacts .btn{flex:1;min-width:90px;text-align:center}
+  /* ===== Relation Bar ===== */
+  #relbar{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--card);
+    border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:10px 14px;display:none;
+    align-items:center;gap:10px;z-index:25;max-width:92%}
+  #relbar.show{display:flex}
+  #relbar .rb-title{font-size:13px;color:var(--dai);font-weight:700}
+  #relbar .rb-pick{font-size:13px;padding:5px 10px;border-radius:8px;background:var(--paper);border:1px solid var(--line);
+    min-width:64px;text-align:center;color:var(--ink-soft)}
+  #relbar .rb-pick.set{background:var(--seal);color:#fff;border-color:var(--seal)}
+  #relbar .rb-res{font-size:14px;font-weight:700;color:var(--seal)}
+  #relbar .rb-x{cursor:pointer;color:var(--ink-soft);font-size:18px;border:none;background:none}
+  /* ===== Modal ===== */
+  .mask{position:fixed;inset:0;background:rgba(42,38,34,.45);display:none;align-items:center;justify-content:center;z-index:50}
+  .mask.show{display:flex}
+  .modal{width:min(460px,92vw);background:var(--card);border-radius:18px;padding:24px;box-shadow:var(--shadow);
+    border:1px solid var(--line);max-height:86vh;overflow:auto}
+  .modal h2{margin:0 0 6px;font-size:20px}
+  .modal p{font-size:14px;color:var(--ink-soft);line-height:1.7;margin:8px 0}
+  .modal .mgrs{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}
+  .modal .mgr{flex:1;min-width:110px;text-align:center;padding:12px 8px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+  .modal .mgr .mk{font-size:22px}
+  .modal .mgr .mn{font-size:13px;margin-top:4px;font-weight:700}
+  .modal .mgr .mr{font-size:11px;color:var(--ink-soft)}
+  .modal .flow{background:var(--paper);border:1px dashed var(--line);border-radius:12px;padding:12px;font-size:13px;color:var(--ink-soft);line-height:1.8}
+  .modal .acts{display:flex;gap:10px;margin-top:18px}
+  .modal .acts .btn{flex:1;text-align:center}
+  .dir-h{font-size:12px;color:var(--dai);font-weight:700;margin:12px 0 6px;letter-spacing:1px;border-left:3px solid var(--seal);padding-left:8px}
+  /* ===== Mobile bottom tabs ===== */
+  .mbar{display:none}
+  @media(max-width:760px){
+    header{flex-wrap:wrap;padding:10px 12px;gap:8px}
+    .brand h1{font-size:15px}
+    .brand small{display:none}
+    .tabs{order:3;width:100%;justify-content:center;margin:2px 0 0}
+    .tab{padding:7px 12px;font-size:13px}
+    .search{order:2;margin-left:auto}
+    .search input{width:84px}
+    .btn.apply{order:1}
+    main{margin-bottom:54px}
+    aside{width:100%;height:auto;top:auto;bottom:0;max-height:82%;border-left:none;border-top:1px solid var(--line);
+      border-radius:18px 18px 0 0;transform:translateY(105%)}
+    aside.open{transform:translateY(0)}
+    .mbar{position:fixed;left:0;right:0;bottom:0;height:54px;background:var(--card);border-top:1px solid var(--line);
+      display:flex;z-index:40}
+    .mbar .mt{flex:1;display:grid;place-items:center;font-size:12px;color:var(--ink-soft);gap:2px;cursor:pointer}
+    .mbar .mt .mi{font-size:18px}
+    .mbar .mt.on{color:var(--seal)}
+    .getip{max-width:90%;bottom:64px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="seal" id="sealTxt">蔡氏<br>宗谱</div>
+    <div><h1 id="titleTxt">蔡氏宗谱</h1><small>CAI · 清雅版原型</small></div>
+  </div>
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-view="tree">树状</div>
+    <div class="tab" data-view="diao">吊线</div>
+    <div class="tab" data-view="wu">五服</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="search">
+    <select id="genSel"><option value="">按代…</option></select>
+    <input id="cityIn" placeholder="居住地·城市">
+    <button class="btn ghost" id="searchBtn">搜索</button>
+    <button class="btn ghost" id="dirBtn">人员目录</button>
+    <button class="btn seal apply" id="applyBtn">申请修改</button>
+  </div>
+</header>
+
+<main>
+  <svg id="stage"></svg>
+  <div class="getip" id="getip">提示：滚轮缩放 · 拖拽平移 · 点击人物查看详情</div>
+
+  <!-- Relation derivation bar -->
+  <div id="relbar">
+    <span class="rb-title">关系推导</span>
+    <span class="rb-pick" id="rbA">选甲</span>
+    <span>→</span>
+    <span class="rb-pick" id="rbB">选乙</span>
+    <span class="rb-res" id="rbRes">—</span>
+    <button class="rb-x" id="rbClose">×</button>
+  </div>
+
+  <!-- Detail panel -->
+  <aside id="panel">
+    <div class="ph">
+      <div class="avatar" id="av">·</div>
+      <div><div class="name" id="pName">—</div><div class="sub" id="pSub">—</div></div>
+      <button class="close" id="pClose">×</button>
+    </div>
+    <div class="pbody" id="pBody"></div>
+    <div class="pacts">
+      <button class="btn ghost" id="actWu">查看五服</button>
+      <button class="btn ghost" id="actRel">关系推导</button>
+      <button class="btn seal" id="actApply">申请修改</button>
+    </div>
+  </aside>
+</main>
+
+<!-- Mobile bottom bar -->
+<div class="mbar" id="mbar">
+  <div class="mt on" data-view="tree"><div class="mi">🌳</div>树状</div>
+  <div class="mt" data-view="diao"><div class="mi">📜</div>吊线</div>
+  <div class="mt" data-view="wu"><div class="mi">⭕</div>五服</div>
+  <div class="mt" id="mSearch"><div class="mi">🔍</div>搜索</div>
+  <div class="mt" id="mApply"><div class="mi">✎</div>申请</div>
+</div>
+
+<!-- Apply modal -->
+<div class="mask" id="mask">
+  <div class="modal">
+    <h2>申请修改 · 共同维护</h2>
+    <p>本谱由 <b>三位主理人</b> 共同管理，<b>家人仅可阅读，修改需申请</b>。提交申请后，由主理人审核通过并更新数据。</p>
+    <div class="mgrs" id="mgrList"></div>
+    <div class="flow">
+      ① 填写申请表单（新增 / 更正人物与关系）<br>
+      ② 表单通知三位主理人<br>
+      ③ 任一主理人审核通过，合并入谱并重新发布<br>
+      ④ 微信扫码即可看到更新
+    </div>
+    <p style="margin-top:14px">申请表单（示例链接，可替换为腾讯问卷 / 腾讯文档）：</p>
+    <p><a href="#" id="formLink" style="color:var(--seal);word-break:break-all">https://forms.example.com/chen-family</a></p>
+    <div class="acts">
+      <button class="btn ghost" id="mClose">关闭</button>
+      <button class="btn seal" id="mGo">去填写</button>
+    </div>
+  </div>
+</div>
+
+<!-- 人员目录（含蔡氏主干与外家/姻亲，确保不遗漏） -->
+<div class="mask" id="dirModal">
+  <div class="modal">
+    <h2>人员目录 <span id="dirCount" style="font-size:13px;color:var(--ink-soft);font-weight:400"></span></h2>
+    <input id="dirKw" placeholder="搜索姓名 / 姓氏 / 城市" style="width:100%;font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin:6px 0 10px;background:var(--card);color:var(--ink);outline:none">
+    <div class="pbody" id="dirList" style="padding:0;max-height:60vh"></div>
+    <div class="acts"><button class="btn ghost" id="dirClose">关闭</button></div>
+  </div>
+</div>
+
+<script src="family-members.js"></script>
+<script src="family-data.js"></script>
+<script>
+/* ============ 主程序（数据来自 family-members.js / family-data.js） ============ */
+/* ============ 计算与索引（数据来自 family-members.js / family-data.js） ============ */
+const byId = {};
+DATA.members.forEach(m=>byId[m.id]=m);
+function computeGen(){
+  function genOf(m,seen){ if(m.gen) return m.gen; if(!m.fatherId){m.gen=1;return 1;} if(seen.has(m.id))return 1; seen.add(m.id);
+    const f=byId[m.fatherId]; m.gen=(f?genOf(f,seen):0)+1; return m.gen; }
+  DATA.members.forEach(m=>genOf(m,new Set()));
+}
+computeGen();
+function isAlive(m){ return !(m.death || m.deceased); }
+const ROOT = (DATA.members.find(m=>!m.fatherId && !m.orphan && m.gender==='M')||{id:'I500004'}).id;
+function childrenOf(id){ return DATA.members.filter(m=>m.fatherId===id); }
+function spousesOf(id){ const m=byId[id];
+  // 原配在前、继配在后：详情卡「直系家庭」与图中重叠顺序都按这个次序
+  return (m.spouses||[]).map(s=>({ref:byId[s.id],type:s.type}))
+    .sort((a,b)=>((a.type==='原配'?0:a.type==='继配'?1:2)-(b.type==='原配'?0:b.type==='继配'?1:2))); }
+function fatherOf(id){ const m=byId[id]; if(!m)return null;
+  // fatherId 是「树中的父节点」（可为蔡姓母亲，用于保证蔡氏主干连贯），
+  // 因此按性别取父：先 fatherId，若其非男性再退到 motherId 里的男性。
+  const a=m.fatherId?byId[m.fatherId]:null, b=m.motherId?byId[m.motherId]:null;
+  if(a&&a.gender==='M')return a;
+  if(b&&b.gender==='M')return b;
+  return null; }
+function motherOf(id){ const m=byId[id]; if(!m)return null;
+  const b=m.motherId?byId[m.motherId]:null, a=m.fatherId?byId[m.fatherId]:null;
+  if(b&&b.gender==='F')return b;
+  if(a&&a.gender==='F')return a;
+  const f=fatherOf(id); if(!f)return null; const sp=spousesOf(f.id).find(s=>s.type==="原配"); return sp?sp.ref:null; }
+function siblingsOf(id){ const m=byId[id]; if(!m.fatherId)return[]; return childrenOf(m.fatherId).filter(c=>c.id!==id); }
+const maxGen = Math.max(...DATA.members.map(m=>m.gen));
+
+/* ============ 状态 ============ */
+const stage=document.getElementById('stage');
+let view='tree', selected=null, transform={x:40,y:40,k:1};
+let relMode=false, relA=null, relB=null, searchSet=new Set();
+
+/* ============ 通用：节点绘制 ============ */
+/* opt.textX：文字中心占框宽的比例（0~1）。被本人压住一半的配偶，文字移向未被压住的一侧，
+   否则姓名会被本人的框切掉（如「丽舫 张」只露出一个「丽」）。 */
+/* 自适应字号：名字过长时逐级缩小，保证不溢出可见区域（如 Christophe Allegro）。 */
+function fitFont(text, base, avail){
+  const wide=ch=>/[\u3000-\u9fff\uff00-\uffef]/.test(ch);   // 中日韩字符按全宽计
+  const widthAt=s=>[...text].reduce((a,ch)=>a+(wide(ch)?1:0.6),0)*s;
+  let fs=base; while(fs>8 && widthAt(fs)>avail) fs-=1.5; return fs;
+}
+function nodeG(id,x,y,w,h,opt={}){
+  const m=byId[id]; const f=m.gender==='M';
+  const dim = searchSet.size&&!searchSet.has(id)?' dim':'';
+  const sel = selected===id?' sel':'';
+  const hl = (relMode&&(relA===id||relB===id))?' hl':'';
+  const tx=typeof opt.textX==='number'?opt.textX:0.5;
+  // 被压住一半的配偶只有半格可用；其余用整格
+  const avail=(tx!==0.5)? Math.max(40, w*0.5-10) : Math.max(60, w-14);
+  const fsName=fitFont(m.name, 15, avail);
+  const sub=`${f?'♂':'♀'} ${isAlive(m)?'在':'故'}·${m.city}`;
+  const fsSub=fitFont(sub, 11, avail);
+  return `<g class="node${dim}${sel}${hl}" data-id="${id}" transform="translate(${x},${y})">
+    <rect width="${w}" height="${h}" rx="10" fill="${opt.fill||'#FBF8F1'}" stroke="${f?'#2A2622':'#B23A2E'}" stroke-width="1.8"/>
+    <text x="${w*tx}" y="${h/2-3}" text-anchor="middle" font-size="${fsName}" font-weight="700" fill="#2A2622">${m.name}</text>
+    <text x="${w*tx}" y="${h/2+13}" text-anchor="middle" font-size="${fsSub}" fill="#6B6358">${sub}</text>
+  </g>`;
+}
+function applyTransform(){ const vp=document.getElementById('vp'); if(vp)vp.setAttribute('transform',`translate(${transform.x},${transform.y}) scale(${transform.k})`); }
+
+/* ============ 夫妻节点：配偶（粉色）绘于蔡氏本人之后（z 序在下），与本人重叠约一半 ============ */
+function coupleNode(id,x,y,w,h,opt={},side='left'){
+  let svg='';
+  spousesOf(id).forEach((s,i)=>{ if(s.ref){
+    // 第一任与本人重叠一半；第二任起整体再后移一个身位，避免姓名被下一任的框压住
+    const ox=(side==='left'?-1:1)*(w*0.5+i*w);
+    // 第一任被本人压住右/左半：文字移向可见的一侧（side=left 时妻子在左、被压右侧 → 文字偏左）
+    const tx = i===0 ? (side==='left'?0.3:0.72) : 0.5;
+    svg+=nodeG(s.ref.id, x+ox, y, w, h, {fill:'#F3D3CD', textX:tx}); } });
+  svg+=nodeG(id,x,y,w,h,opt);
+  return svg;
+}
+/* ============ 多妻：每位妻子（粉色）绘在其所出子女组的中心 =============
+   仍在蔡氏本人之后（z 序在下）、与本人所在列重叠一半；
+   配合「妻子 → 自己的子女」拉线，形成「与一任妻子一棵树」。 */
+function coupleNodeGrouped(id,x,y,w,h,opt={}){
+  let svg='';
+  (byId[id]._groupInfo||[]).forEach(g=>{
+    const momId=byId[g.ids[0]]?byId[g.ids[0]].motherId:null;
+    if(momId&&byId[momId]) svg+=nodeG(momId, x-w*0.5, (g.top+g.bot)/2, w, h, {fill:'#F3D3CD'});
+  });
+  svg+=nodeG(id,x,y,w,h,opt);
+  return svg;
+}
+/* ============ 树状视图（横向，根在左；按母亲分房，同代同列） ============ */
+function renderTree(){
+  const roots=DATA.members.filter(m=>!m.fatherId && m.gender==='M' && !m.orphan);
+  const xGap=250, yGap=82, w=150, h=52;
+  const xM=140;                 // 左边距：容纳「本人左侧重叠一半的妻子」框，防止被 viewBox 裁掉
+  let cursor=40;
+  const placed=[];
+  function setPos(id,depth,y){ const m=byId[id]; m._x=xM+depth*xGap; m._y=y; if(placed.indexOf(id)<0)placed.push(id); }
+  function layout(id, depth){
+    const kids=childrenOf(id);
+    if(kids.length===0){ const y=cursor; cursor+=yGap; setPos(id,depth,y); return y; }
+    // 按母亲分房：同一父亲、不同妻子的子女分成若干组（蔡儒合即吴纯卿房 / 黄秀卿房）
+    const groups=new Map();
+    kids.forEach(c=>{ const k=c.motherId||'__none__'; if(!groups.has(k))groups.set(k,[]); groups.get(k).push(c); });
+    let order=[...groups.values()];
+    // 多妻时按「原配 → 继配」排序，保证原配房在上
+    const wifeRank=mid=>{ const sp=(byId[id].spouses||[]).find(s=>s.id===mid); return sp?(sp.type==='原配'?0:sp.type==='继配'?1:2):2; };
+    if(order.length>1) order.sort((a,b)=>wifeRank(a[0].motherId)-wifeRank(b[0].motherId));
+    let firstY=Infinity,lastY=-Infinity; const groupInfo=[];
+    order.forEach(grp=>{ let gTop=Infinity,gBot=-Infinity;
+      grp.forEach(c=>{ const branches=(c.gender==='M'&&!c.orphan&&childrenOf(c.id).length>0);
+        let cy; if(branches) cy=layout(c.id,depth+1); else { cy=cursor; cursor+=yGap; setPos(c.id,depth+1,cy); }
+        firstY=Math.min(firstY,cy); lastY=Math.max(lastY,cy);
+        gTop=Math.min(gTop,cy); gBot=Math.max(gBot,cy); });
+      groupInfo.push({ids:grp.map(c=>c.id), top:gTop, bot:gBot}); });
+    const y=(firstY+lastY)/2; setPos(id,depth,y); byId[id]._groupInfo=groupInfo; return y;
+  }
+  roots.forEach(r=>layout(r.id,0));
+  let links='',nodes='';
+  placed.forEach(id=>{
+    const m=byId[id]; const x=m._x,y=m._y;
+    const multi=m._groupInfo&&m._groupInfo.length>1;
+    if(multi){
+      // 多妻：由每位妻子向其所出子女拉线（一任妻子一棵树），不再从父亲直拉
+      m._groupInfo.forEach(g=>{
+        const wy=(g.top+g.bot)/2+h/2;
+        g.ids.forEach(cid=>{ const cc=byId[cid]; if(!cc||typeof cc._x!=='number')return;
+          links+=`<path class="link" d="M${x+w*0.5} ${wy} C${x+w*0.95} ${wy}, ${cc._x-w*0.5} ${cc._y+h/2}, ${cc._x} ${cc._y+h/2}"/>`; });
+      });
+      nodes+=coupleNodeGrouped(id,x,y,w,h,{});
+    } else {
+      childrenOf(id).forEach(c=>{ const cc=byId[c.id]; if(typeof cc._x!=='number')return;
+        links+=`<path class="link" d="M${x+w} ${y+h/2} C${x+w+50} ${y+h/2}, ${cc._x-50} ${cc._y+h/2}, ${cc._x} ${cc._y+h/2}"/>`; });
+      nodes+=coupleNode(id,x,y,w,h,{},'left');
+    }
+  });
+  // 多妻时标注每房所出（如儒合：吴纯卿房 / 黄秀卿房）
+  let roomLabels='';
+  placed.forEach(id=>{ const m=byId[id]; if(!m._groupInfo||m._groupInfo.length<=1)return;
+    const childX=m._x+xGap;
+    m._groupInfo.forEach((g,gi)=>{ const midY=(g.top+g.bot)/2;
+      const momId=byId[g.ids[0]]?byId[g.ids[0]].motherId:null;
+      const momName=(momId&&byId[momId])?byId[momId].name.replace(/\s+$/,''):'妻';
+      const label=`${momName} 所出 · ${g.ids.length} 人`;
+      const lw=label.length*12+18; const cxL=childX+w/2;
+      const ly=Math.max(14, g.top-30);
+      roomLabels+=`<g><rect x="${cxL-lw/2}" y="${ly-13}" width="${lw}" height="26" rx="13" fill="#FBF1DC" stroke="#A9852F" stroke-width="1"/>`
+        +`<text x="${cxL}" y="${ly+4}" text-anchor="middle" font-size="12" font-weight="700" fill="#8a6a1f">${label}</text></g>`; }); });
+  const vw=Math.max.apply(null,placed.map(id=>byId[id]._x))+w+260;
+  const vh=cursor+40;
+  setSVG(placed, roomLabels+nodes, links, vw, vh);
+}
+/* ============ 吊线视图（纵向，代自上而下） ============ */
+function renderDiao(){
+  const roots=DATA.members.filter(m=>!m.fatherId && m.gender==='M' && !m.orphan);
+  // xGap 需容纳「本人 + 两位妻子」：第一任重叠半格、第二任再后移一格，
+  // w=140 时第二任妻子右缘 = x+0.5w+2w = x+350，故列距取 400 防止压到下一列
+  const xGap=400,yGap=120,w=140,h=54; let order=0;
+  function assign(id){
+    const kids=childrenOf(id).filter(c=>c.gender==='M' && !c.orphan);
+    if(kids.length===0){ byId[id]._ox=order++; }
+    else{ kids.forEach(k=>assign(k.id)); byId[id]._ox=(byId[kids[0].id]._ox+byId[kids[kids.length-1].id]._ox)/2; }
+  }
+  roots.forEach(r=>assign(r.id));
+  let links='',nodes='';
+  // 仅渲染男性主干 + 其配偶（配偶粉色、绘于本人之后，重叠约一半）
+  DATA.members.filter(m=>m.gender==='M' && !m.orphan).forEach(m=>{
+    const x=byId[m.id]._ox*xGap, y=(m.gen-1)*yGap;
+    // 只连男性子嗣（女儿不给列号，否则 _ox 为 undefined 会产出 NaN 连线）
+    childrenOf(m.id).filter(c=>c.gender==='M' && !c.orphan).forEach(c=>{ const cx=byId[c.id]._ox*xGap, cy=(byId[c.id].gen-1)*yGap;
+      links+=`<path class="link" d="M${x+w/2} ${y+h} L${x+w/2} ${y+h+22} L${cx+w/2} ${y+h+22} L${cx+w/2} ${cy}"/>`; });
+    nodes+=coupleNode(m.id,x,y,w,h,{},'right');
+  });
+  setSVG(DATA.members.filter(m=>m.gender==='M' && !m.orphan).map(m=>m.id),nodes,links,xGap*(order)+360,yGap*maxGen+60);
+}
+/* ============ 五服视图（以选中人为中心） ============ */
+function renderWu(){
+  const c=selected||ROOT; const m=byId[c];
+  const W=900,H=620,w=130,h=50; const cx=W/2, cy=H/2;
+  let nodes=coupleNode(c,cx-w/2,cy-h/2,w,h,{},'right');
+  let links='';
+  // 向上尊亲（每位祖先的妻子同样粉色、在右、重叠一半）
+  let anc=m; let upY=cy-h/2-90; let prevBottom=cy-h/2;
+  while(true){ const f=fatherOf(anc.id); if(!f)break;
+    links+=`<path class="link" d="M${cx} ${upY+h} L${cx} ${prevBottom}"/>`;
+    nodes+=coupleNode(f.id,cx-w/2,upY,w,h,{},'right');
+    anc=f; prevBottom=upY; upY-=90;
+  }
+  // 向下卑亲
+  function down(id,depth,xoff){ const kids=childrenOf(id); let yy=cy+h/2+90+depth*90;
+    kids.forEach((k,i)=>{ const xx=cx-w/2 + (i-(kids.length-1)/2)*160;
+      nodes+=nodeG(k.id,xx,yy,w,h); links+=`<path class="link" d="M${cx} ${cy+h/2} L${xx+w/2} ${yy}"/>`;
+      down(k.id,depth+1,0);
+    });
+  }
+  down(c,0,0);
+  // 同代兄弟姐妹
+  siblingsOf(c).forEach((s,i)=>{ const xx=cx-w/2+(i-(siblingsOf(c).length-1)/2)*150; nodes+=nodeG(s.id,xx,cy-h/2,w,h); });
+  // 父之兄弟姐妹（叔伯姑）
+  const f=fatherOf(c); if(f){ siblingsOf(f.id).forEach((s,i)=>{ const xx=cx-w/2+(i-(siblingsOf(f.id).length-1)/2)*150; const yy=cy-h/2-90; nodes+=nodeG(s.id,xx,yy,w,h); }); }
+  setSVG([],nodes,links,W,H,true);
+}
+/* ============ 注入 SVG ============ */
+function setSVG(ids,nodes,links,vw,vh,noZoom){
+  const defs=`<defs></defs>`;
+  stage.setAttribute('viewBox',`0 0 ${vw} ${vh}`);
+  stage.innerHTML=`<g id="vp" transform="translate(${transform.x},${transform.y}) scale(${transform.k})">${defs}${links}${nodes}</g>`;
+  applyTransform();
+  stage.querySelectorAll('.node').forEach(g=>g.addEventListener('click',e=>{ e.stopPropagation(); onNodeClick(g.dataset.id); }));
+}
+/* ============ 点击节点 ============ */
+function onNodeClick(id){
+  if(relMode){ if(!relA){relA=id;document.getElementById('rbA').textContent=byId[id].name;document.getElementById('rbA').classList.add('set');}
+    else if(!relB&&id!==relA){relB=id;document.getElementById('rbB').textContent=byId[id].name;document.getElementById('rbB').classList.add('set');calcRel();}
+    return; }
+  selected=id; render(); openDetail(id);
+}
+/* ============ 详情面板 ============ */
+function relItem(m,tag){ if(!m)return''; const f=m.gender==='M';
+  return `<div class="rel-item" data-go="${m.id}"><div class="mini ${f?'m':'f'}">${f?'♂':'♀'}</div><div class="rn">${m.name}</div>${tag?`<span class="rt">${tag}</span>`:''}${m.adopted?'<span class="tag">嗣</span>':''}</div>`; }
+function openDetail(id){
+  const m=byId[id]; selected=id; const f=m.gender==='M';
+  document.getElementById('av').className='avatar '+(f?'m':'f');
+  document.getElementById('av').textContent=f?'♂':'♀';
+  document.getElementById('pName').textContent=m.name;
+  document.getElementById('pSub').textContent=`第 ${m.gen} 代 · ${m.city}${isAlive(m)?' · 在世':' · 已故'}`;
+  const badges=`<div class="badges">
+    <span class="badge ${isAlive(m)?'alive':'dead'}">${isAlive(m)?'在世':'已故'}</span>
+    <span class="badge gen">第 ${m.gen} 代</span>
+    <span class="badge">${f?'男':'女'}</span>
+    <span class="badge">现居 ${m.city}</span></div>`;
+  const base=`<div class="block"><h3>基本信息</h3>
+    <div class="rel-item" style="cursor:default"><div class="rn">生年 ${m.birth||'—'}${m.death?(' · 卒年 '+m.death):''}</div></div>
+    ${m.note?`<div class="rel-item" style="cursor:default"><div class="rn" style="color:var(--seal)">${m.note}</div></div>`:''}</div>`;
+  const up=`<div class="block"><h3>上一代</h3>${relItem(fatherOf(id),'父')||'<div class="rel-item" style="cursor:default"><div class="rn">— 始祖 —</div></div>'}${relItem(motherOf(id),'母')}</div>`;
+  const fam=`<div class="block"><h3>直系家庭</h3>${(spousesOf(id).length?spousesOf(id).map(s=>relItem(s.ref,s.type)).join(''):'<div class="rel-item" style="cursor:default"><div class="rn">未录入配偶</div></div>')}</div>`;
+  // 下一代：若子女分属不同母亲（如儒合两位妻子），按「房」分组列出，不混在一起
+  const kids=childrenOf(id);
+  let downHTML='<div class="rel-item" style="cursor:default"><div class="rn">无子女记录</div></div>';
+  if(kids.length){
+    const groups=new Map();
+    kids.forEach(c=>{ const k=c.motherId||'—'; if(!groups.has(k))groups.set(k,[]); groups.get(k).push(c); });
+    if(groups.size<=1){ downHTML=kids.map(c=>relItem(c,'子女')).join(''); }
+    else{
+      // 与树状图一致：原配房在前、继配房在后
+      const rank=mid=>{ const sp=(m.spouses||[]).find(s=>s.id===mid); return sp?(sp.type==='原配'?0:sp.type==='继配'?1:2):2; };
+      const ordered=[...groups].sort((a,b)=>rank(a[0])-rank(b[0]));
+      downHTML=ordered.map(([mid,arr])=>{
+        const mom=byId[mid];
+        const label=mom?`${mom.name}${mom.rank?'（'+mom.rank+'）':''} 所出`:'母亲不详';
+        return `<div class="roomh">— ${label} · ${arr.length} 人 —</div>`
+             + arr.map(c=>relItem(c,'子女')).join('');
+      }).join('');
+    }
+  }
+  const down=`<div class="block"><h3>下一代${kids.length?'（'+kids.length+'）':''}</h3>${downHTML}</div>`;
+  document.getElementById('pBody').innerHTML=badges+base+up+fam+down;
+  document.getElementById('pBody').querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>openDetail(el.dataset.go)));
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('getip').style.display='none';
+}
+/* ============ 关系推导 ============ */
+function ancestors(id){ // 父母双线 BFS，返回 Map(id->距本人的深度)
+  const map=new Map(); if(!byId[id])return map;
+  const q=[{k:id,d:0}]; const seen=new Set([id]);
+  while(q.length){ const {k,d}=q.shift(); map.set(k,d);
+    const m=byId[k]; if(!m)continue;
+    const ps=[m.fatherId,m.motherId].filter(x=>x&&byId[x]&&!seen.has(x));
+    for(const p of ps){ seen.add(p); q.push({k:p,d:d+1}); } }
+  return map;
+}
+function lca(a,b){ // 最近共同祖先（取公共祖先中「距两人之和最小」者=最深/最低的共同祖先）
+  const ma=ancestors(a), mb=ancestors(b); if(!ma.size||!mb.size)return null;
+  let best=null,bestSum=Infinity;
+  for(const [k,da] of ma){ if(mb.has(k)){ const s=da+mb.get(k); if(s<bestSum){bestSum=s;best=k;} } }
+  return best;
+}
+function relation(a,b){
+  if(a===b)return '自己';
+  const A=byId[a],B=byId[b]; if(!A||!B)return '—';
+  // 配偶
+  if(spousesOf(a).some(s=>s.ref&&s.ref.id===b)) return A.gender==='M'?'丈夫':'妻子';
+  const ma=ancestors(a), mb=ancestors(b), L=lca(a,b);
+  if(!L) return '远房亲属';
+  const da=ma.get(L), db=mb.get(L);
+  // 同宗判定（按姓氏）：同姓 → 堂；异姓 → 表。
+  // 例：王妨菁（母为蔡氏、父姓王）对蔡姓平辈为「表」，只有同姓蔡的平辈才是「堂」。
+  const sameS = !!(A.surname && B.surname && A.surname===B.surname);
+  const elder = (A.birth&&B.birth)? A.birth<=B.birth : (A.gender==='M'); // 年长或未知→兄/姐
+  // 直系：a 是 b 的祖先
+  if(da===0&&db>0){
+    if(db===1) return A.gender==='M'?'父亲':'母亲';
+    if(db===2) return A.gender==='M'?'祖父':'祖母';
+    if(db===3) return A.gender==='M'?'曾祖父':'曾祖母';
+    return `上 ${db} 代尊亲`;
+  }
+  // 直系：b 是 a 的祖先
+  if(db===0&&da>0){
+    if(da===1) return A.gender==='M'?'儿子':'女儿';
+    if(da===2) return A.gender==='M'?'孙子':'孙女';
+    if(da===3) return A.gender==='M'?'曾孙':'曾孙女';
+    return `下 ${da} 代卑亲`;
+  }
+  // 旁系同代
+  if(da===db){
+    if(da===1) return A.gender==='M'?'兄弟':'姐妹';
+    const term = sameS
+      ? (A.gender==='M'?(elder?'堂兄':'堂弟'):(elder?'堂姐':'堂妹'))
+      : (A.gender==='M'?(elder?'表兄':'表弟'):(elder?'表姐':'表妹'));
+    if(da===2) return term;
+    if(da===3) return sameS?(A.gender==='M'?'再从兄弟':'再从姐妹'):'远房表亲';
+    return `远房同宗（${da}世）`;
+  }
+  // a 辈分更高（a 是 b 的父辈旁系）
+  if(da<db){
+    if(da===1&&db===2) return A.gender==='M'?'伯父/叔父':'姑母';
+    if(da===1&&db>=3) return A.gender==='M'?'伯祖/叔祖':'姑祖母';
+    return `长辈旁系（高 ${db-da} 代）`;
+  }
+  // a 辈分更低（a 是 b 的晚辈旁系）
+  if(da>db){
+    if(da===2&&db===1) return A.gender==='M'?'侄子':'侄女';
+    if(da>=3&&db===1) return A.gender==='M'?'侄孙':'侄孙女';
+    return `晚辈旁系（低 ${da-db} 代）`;
+  }
+  return '远房亲属';
+}
+function calcRel(){ if(relA&&relB){ const r=relation(relA,relB);
+  document.getElementById('rbRes').textContent=`${byId[relA].name} 是 ${byId[relB].name} 的「${r}」`;
+  highlightPath(relA,relB); } }
+function highlightPath(a,b){
+  // 高亮 a、b 及最近共同祖先路径（沿父或母回溯，父为外家时也能正确连线）
+  const L=lca(a,b); const set=new Set([a,b,L]);
+  const climb=(id,amap)=>{ let cur=byId[id]; while(cur&&cur.id!==L){ set.add(cur.id);
+    const nxt=[cur.fatherId,cur.motherId].map(x=>x&&amap.has(x)?byId[x]:null).find(Boolean);
+    if(!nxt)break; cur=nxt; } };
+  climb(a,ancestors(a)); climb(b,ancestors(b));
+  stage.querySelectorAll('.node').forEach(g=>{ const id=g.dataset.id; g.classList.toggle('hl',set.has(id)); });
+}
+/* ============ 搜索 ============ */
+function doSearch(){
+  const gen=document.getElementById('genSel').value; const city=document.getElementById('cityIn').value.trim();
+  searchSet=new Set();
+  DATA.members.forEach(m=>{ let ok=true;
+    if(gen&&String(m.gen)!==gen) ok=false;
+    if(city&&!m.city.includes(city)) ok=false;
+    if(ok) searchSet.add(m.id);
+  });
+  if(!gen&&!city) searchSet=new Set();
+  render();
+  if(searchSet.size){ const first=[...searchSet][0]; selected=first; openDetail(first); }
+}
+/* ============ 渲染调度 ============ */
+function render(){ if(view==='tree')renderTree(); else if(view==='diao')renderDiao(); else renderWu(); }
+function switchView(v){ view=v; selected=(v==='wu'&&!selected)?ROOT:selected;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  document.querySelectorAll('.mt').forEach(t=>t.classList.toggle('on',t.dataset.view===v));
+  render(); }
+/* ============ 申请弹层 ============ */
+function openApply(){ const ml=document.getElementById('mgrList');
+  ml.innerHTML=DATA.managers.map(m=>`<div class="mgr"><div class="mk">${m.k}</div><div class="mn">${m.n}</div><div class="mr">${m.r}</div></div>`).join('');
+  document.getElementById('formLink').textContent=DATA.formUrl;
+  document.getElementById('mask').classList.add('show'); }
+/* ============ 人员目录（旁系/外家） ============ */
+function openDir(){
+  const wrap=document.getElementById('dirList');
+  const cai=DATA.members.filter(m=>m.clan==='cai');
+  const ext=DATA.members.filter(m=>m.clan!=='cai');
+  const block=(title,arr)=>{ if(!arr.length)return'';
+    return `<div class="dir-h">${title}（${arr.length}）</div>`+
+      arr.map(m=>`<div class="rel-item" data-dir="${m.id}"><div class="mini ${m.gender==='M'?'m':'f'}">${m.gender==='M'?'♂':'♀'}</div><div class="rn">${m.name}</div><span class="rt">第${m.gen}代 · ${m.city}</span>${isAlive(m)?'':'<span class="tag">故</span>'}</div>`).join(''); };
+  const render=()=>{ const kw=document.getElementById('dirKw').value.trim();
+    const f=m=>!kw||m.name.includes(kw)||(m.surname&&m.surname.includes(kw))||(m.city&&m.city.includes(kw));
+    wrap.innerHTML=block('蔡氏主干',cai.filter(f))+block('外家 / 姻亲',ext.filter(f));
+    wrap.querySelectorAll('[data-dir]').forEach(el=>el.onclick=()=>{openDetail(el.dataset.dir);document.getElementById('dirModal').classList.remove('show');}); };
+  document.getElementById('dirKw').value='';
+  document.getElementById('dirKw').oninput=render;
+  document.getElementById('dirCount').textContent='共 '+DATA.members.length+' 人';
+  render();
+  document.getElementById('dirModal').classList.add('show');
+}
+/* ============ 关系推导模式开关 ============ */
+function toggleRel(){ relMode=!relMode; relA=relB=null; searchSet=new Set();
+  document.getElementById('relbar').classList.toggle('show',relMode);
+  document.getElementById('rbA').classList.remove('set'); document.getElementById('rbB').classList.remove('set');
+  document.getElementById('rbA').textContent='选甲'; document.getElementById('rbB').textContent='选乙'; document.getElementById('rbRes').textContent='—';
+  if(relMode){ document.getElementById('getip').textContent='关系推导：依次点击两位人物'; document.getElementById('getip').style.display='block'; }
+  else { document.getElementById('getip').textContent='提示：滚轮缩放 · 拖拽平移 · 点击人物查看详情'; }
+  render(); }
+/* ============ 事件绑定 ============ */
+document.getElementById('tabs').addEventListener('click',e=>{ if(e.target.dataset.view)switchView(e.target.dataset.view); });
+document.getElementById('mbar').addEventListener('click',e=>{ const t=e.target.closest('.mt'); if(!t)return;
+  if(t.id==='mSearch'){document.getElementById('cityIn').focus();return;} if(t.id==='mApply'){openApply();return;} switchView(t.dataset.view); });
+document.getElementById('pClose').onclick=()=>{document.getElementById('panel').classList.remove('open');selected=null;render();};
+document.getElementById('searchBtn').onclick=doSearch;
+document.getElementById('cityIn').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+document.getElementById('applyBtn').onclick=openApply;
+document.getElementById('actApply').onclick=openApply;
+document.getElementById('mClose').onclick=()=>document.getElementById('mask').classList.remove('show');
+document.getElementById('mGo').onclick=()=>window.open(DATA.formUrl,'_blank');
+document.getElementById('actWu').onclick=()=>switchView('wu');
+document.getElementById('actRel').onclick=()=>{ if(!selected){alert('请先在图中点选一位人物');return;} toggleRel(); relA=selected; document.getElementById('rbA').textContent=byId[selected].name; document.getElementById('rbA').classList.add('set'); };
+document.getElementById('rbClose').onclick=toggleRel;
+stage.addEventListener('click',()=>{ if(!relMode){document.getElementById('panel').classList.remove('open');selected=null;render();} });
+// 缩放平移
+stage.addEventListener('wheel',e=>{ e.preventDefault(); const f=e.deltaY<0?1.12:0.89; transform.k=Math.min(2.4,Math.max(0.35,transform.k*f)); applyTransform(); },{passive:false});
+let drag=null;
+stage.addEventListener('mousedown',e=>{ if(e.target.closest('.node'))return; drag={x:e.clientX,y:e.clientY,tx:transform.x,ty:transform.y}; });
+window.addEventListener('mousemove',e=>{ if(!drag)return; transform.x=drag.tx+(e.clientX-drag.x); transform.y=drag.ty+(e.clientY-drag.y); applyTransform(); });
+window.addEventListener('mouseup',()=>drag=null);
+// 移动端触摸平移（简易）
+let t0=null;
+stage.addEventListener('touchstart',e=>{ if(e.target.closest('.node'))return; const t=e.touches[0]; t0={x:t.clientX,y:t.clientY,tx:transform.x,ty:transform.y}; },{passive:true});
+stage.addEventListener('touchmove',e=>{ if(!t0)return; const t=e.touches[0]; transform.x=t0.tx+(t.clientX-t0.x); transform.y=t0.ty+(t.clientY-t0.y); applyTransform(); },{passive:true});
+stage.addEventListener('touchend',()=>t0=null);
+// 初始化代下拉
+const gs=document.getElementById('genSel'); for(let i=1;i<=maxGen;i++){ const o=document.createElement('option'); o.value=i; o.textContent=`第 ${i} 代`; gs.appendChild(o); }
+switchView('tree');
+document.getElementById('sealTxt').innerHTML=DATA.surname+'氏<br>宗谱';
+document.getElementById('titleTxt').textContent=DATA.surname+'氏宗谱';
+document.getElementById('dirBtn').onclick=openDir;
+document.getElementById('dirClose').onclick=()=>document.getElementById('dirModal').classList.remove('show');
+</script>
+</body>
+</html>
