@@ -182,9 +182,9 @@ const FAMILY_MEMBERS = [
     "birth": 2002,
     "city": "瑞士",
     "fatherId": "I500001",
-    "orphan": true,
     "motherId": "I500011",
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500013",
@@ -195,9 +195,9 @@ const FAMILY_MEMBERS = [
     "birth": 2013,
     "city": "瑞士",
     "fatherId": "I500001",
-    "orphan": true,
     "motherId": "I500011",
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500015",
@@ -338,9 +338,9 @@ const FAMILY_MEMBERS = [
     "given": "俊琪",
     "city": "不详",
     "fatherId": "I500022",
-    "orphan": true,
     "motherId": "I500023",
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500025",
@@ -600,9 +600,9 @@ const FAMILY_MEMBERS = [
     "given": "妨菁",
     "city": "新西兰",
     "fatherId": "I500039",
-    "orphan": true,
     "motherId": "I500040",
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500042",
@@ -612,9 +612,9 @@ const FAMILY_MEMBERS = [
     "given": "妨茜",
     "city": "深圳",
     "fatherId": "I500039",
-    "orphan": true,
     "motherId": "I500040",
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500043",
@@ -846,7 +846,6 @@ const FAMILY_MEMBERS = [
     "given": "振群",
     "city": "不详",
     "fatherId": "I500036",
-    "orphan": true,
     "motherId": "I500060",
     "spouses": [
       {
@@ -854,7 +853,8 @@ const FAMILY_MEMBERS = [
         "type": "原配"
       }
     ],
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500060",
@@ -920,9 +920,9 @@ const FAMILY_MEMBERS = [
     "given": "建生",
     "city": "不详",
     "fatherId": "I500037",
-    "orphan": true,
     "motherId": "I500065",
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500065",
@@ -967,7 +967,6 @@ const FAMILY_MEMBERS = [
     "deceased": true,
     "city": "不详",
     "fatherId": "I500038",
-    "orphan": true,
     "motherId": "I500066",
     "spouses": [
       {
@@ -975,7 +974,8 @@ const FAMILY_MEMBERS = [
         "type": "原配"
       }
     ],
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500068",
@@ -985,7 +985,6 @@ const FAMILY_MEMBERS = [
     "given": "梓波",
     "city": "不详",
     "fatherId": "I500038",
-    "orphan": true,
     "motherId": "I500066",
     "spouses": [
       {
@@ -993,7 +992,8 @@ const FAMILY_MEMBERS = [
         "type": "原配"
       }
     ],
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500069",
@@ -1003,7 +1003,6 @@ const FAMILY_MEMBERS = [
     "given": "梓涛",
     "city": "不详",
     "fatherId": "I500038",
-    "orphan": true,
     "motherId": "I500066",
     "spouses": [
       {
@@ -1011,7 +1010,8 @@ const FAMILY_MEMBERS = [
         "type": "原配"
       }
     ],
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500070",
@@ -1021,7 +1021,6 @@ const FAMILY_MEMBERS = [
     "given": "梓标",
     "city": "不详",
     "fatherId": "I500038",
-    "orphan": true,
     "motherId": "I500066",
     "spouses": [
       {
@@ -1029,7 +1028,8 @@ const FAMILY_MEMBERS = [
         "type": "原配"
       }
     ],
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500071",
@@ -1039,7 +1039,6 @@ const FAMILY_MEMBERS = [
     "given": "梓珊",
     "city": "不详",
     "fatherId": "I500038",
-    "orphan": true,
     "motherId": "I500066",
     "spouses": [
       {
@@ -1047,7 +1046,8 @@ const FAMILY_MEMBERS = [
         "type": "原配"
       }
     ],
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500072",
@@ -1074,7 +1074,6 @@ const FAMILY_MEMBERS = [
     "given": "小蓓",
     "city": "汕头",
     "fatherId": "I500028",
-    "orphan": true,
     "motherId": "I500074",
     "spouses": [
       {
@@ -1082,7 +1081,8 @@ const FAMILY_MEMBERS = [
         "type": "原配"
       }
     ],
-    "clan": "external"
+    "clan": "cai",
+    "viaMother": true
   },
   {
     "id": "I500074",

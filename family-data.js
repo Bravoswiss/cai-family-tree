@@ -9,6 +9,7 @@
  * ========================================================================= */
 const FAMILY_CONFIG = {
   surname: "蔡",                                   // 姓氏（标题/印章用）
+  selfId: "I500001",                               // 「我」在族谱中的 ID（五服图默认以此人为中心）
   managers: [                                      // 三位主理人（共同维护、审核申请）
     { n: "主理人·琦冬 蔡", r: "创建人", k: "👑" },
     { n: "主理人·（待补充）", r: "二房代表", k: "🧑‍💼" },
@@ -19,6 +20,7 @@ const FAMILY_CONFIG = {
 
 const DATA = {
   surname: FAMILY_CONFIG.surname,
+  selfId: FAMILY_CONFIG.selfId,
   managers: FAMILY_CONFIG.managers,
   formUrl: FAMILY_CONFIG.formUrl,
   members: FAMILY_MEMBERS

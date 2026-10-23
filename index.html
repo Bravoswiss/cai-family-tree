@@ -371,7 +371,8 @@ function renderTree(){
     if(order.length>1) order.sort((a,b)=>wifeRank(a[0].motherId)-wifeRank(b[0].motherId));
     let firstY=Infinity,lastY=-Infinity; const groupInfo=[];
     order.forEach(grp=>{ let gTop=Infinity,gBot=-Infinity;
-      grp.forEach(c=>{ const branches=(c.gender==='M'&&!c.orphan&&childrenOf(c.id).length>0);
+      // 主干（含女儿）继续向下展开；蔡氏血脉但随外姓者（viaMother）画出即止，不再外扩到外姓后代
+      grp.forEach(c=>{ const branches=(c.clan==='cai' && !c.viaMother && childrenOf(c.id).length>0);
         let cy; if(branches) cy=layout(c.id,depth+1); else { cy=cursor; cursor+=yGap; setPos(c.id,depth+1,cy); }
         firstY=Math.min(firstY,cy); lastY=Math.max(lastY,cy);
         gTop=Math.min(gTop,cy); gBot=Math.max(gBot,cy); });
@@ -419,27 +420,56 @@ function renderDiao(){
   // xGap 需容纳「本人 + 两位妻子」：第一任重叠半格、第二任再后移一格，
   // w=140 时第二任妻子右缘 = x+0.5w+2w = x+350，故列距取 400 防止压到下一列
   const xGap=400,yGap=120,w=140,h=54; let order=0;
+  // 吊线谱画全部蔡氏主干（含女儿、含随外姓的蔡氏血脉），外姓姻亲仅以配偶身份出现
+  const drawn=DATA.members.filter(m=>m.clan==='cai' && !m.orphan);
+  const drawIds=new Set(drawn.map(m=>m.id));
   function assign(id){
-    const kids=childrenOf(id).filter(c=>c.gender==='M' && !c.orphan);
+    // 只给「主干」分配列号；随外姓的血脉末梢其子女是外姓，自然成为叶子
+    const kids=childrenOf(id).filter(c=>drawIds.has(c.id));
     if(kids.length===0){ byId[id]._ox=order++; }
     else{ kids.forEach(k=>assign(k.id)); byId[id]._ox=(byId[kids[0].id]._ox+byId[kids[kids.length-1].id]._ox)/2; }
   }
   roots.forEach(r=>assign(r.id));
+  // 每列按实际需要的宽度排布：只有一位配偶的列窄，双妻的列才留宽，
+  // 避免 80 余人一字排开、整幅被缩到看不清。
+  const colNeed=[];
+  drawn.forEach(m=>{ const c=Math.round(m._ox); const n=spousesOf(m.id).filter(s=>s.ref).length;
+    const need = n>=2 ? w*2.4+70 : (n===1 ? w*1.6+55 : w+55);
+    colNeed[c]=Math.max(colNeed[c]||0, need); });
+  const colX=[]; let acc=70;
+  for(let i=0;i<order;i++){ colX[i]=acc; acc+=(colNeed[i]||260); }
+  const totalW=acc+80;
   let links='',nodes='';
-  // 仅渲染男性主干 + 其配偶（配偶粉色、绘于本人之后，重叠约一半）
-  DATA.members.filter(m=>m.gender==='M' && !m.orphan).forEach(m=>{
-    const x=byId[m.id]._ox*xGap, y=(m.gen-1)*yGap;
-    // 只连男性子嗣（女儿不给列号，否则 _ox 为 undefined 会产出 NaN 连线）
-    childrenOf(m.id).filter(c=>c.gender==='M' && !c.orphan).forEach(c=>{ const cx=byId[c.id]._ox*xGap, cy=(byId[c.id].gen-1)*yGap;
+  drawn.forEach(m=>{
+    const x=colX[Math.round(m._ox)], y=(m.gen-1)*yGap;
+    childrenOf(m.id).filter(c=>drawIds.has(c.id)).forEach(c=>{ const cx=colX[Math.round(byId[c.id]._ox)], cy=(byId[c.id].gen-1)*yGap;
       links+=`<path class="link" d="M${x+w/2} ${y+h} L${x+w/2} ${y+h+22} L${cx+w/2} ${y+h+22} L${cx+w/2} ${cy}"/>`; });
     nodes+=coupleNode(m.id,x,y,w,h,{},'right');
   });
-  setSVG(DATA.members.filter(m=>m.gender==='M' && !m.orphan).map(m=>m.id),nodes,links,xGap*(order)+360,yGap*maxGen+60);
+  setSVG(drawn.map(m=>m.id),nodes,links,totalW,yGap*maxGen+60);
 }
 /* ============ 五服视图（以选中人为中心） ============ */
 function renderWu(){
-  const c=selected||ROOT; const m=byId[c];
-  const W=900,H=620,w=130,h=50; const cx=W/2, cy=H/2;
+  // 默认以「我」为中心：以儒合为中心会向下铺开五十余人，一屏装不下也看不清
+  const c=(selected&&byId[selected])?selected:((DATA.selfId&&byId[DATA.selfId])?DATA.selfId:ROOT);
+  const m=byId[c];
+  // 画布尺寸按实际人丁自适应：儒合有 12 个子女，固定 900 宽会把两侧裁掉
+  const w=130,h=50;
+  let upDepth=0; { let a=m; while(fatherOf(a.id)){ upDepth++; a=fatherOf(a.id); } }
+  // 逐层收集后代：同层人数决定画布宽度；按层居中排布，避免不同父的子女互相重叠
+  const layers=[]; let cur=[m];
+  while(true){ const nx=[]; cur.forEach(p=>childrenOf(p.id).forEach(k=>nx.push(k))); if(!nx.length)break; layers.push(nx); cur=nx; }
+  const fOf=fatherOf(c);
+  // 父辈整行（父亲 + 叔伯姑）：按排行相对父亲的位置排，父亲本身由祖先链绘制，不重复
+  const prow=(fOf&&fOf.fatherId)?childrenOf(fOf.fatherId).filter(x=>x.clan==='cai'):[];
+  const sibC=siblingsOf(c);                    // 我的同辈兄弟姐妹
+  const sx=160, spouseGap=w+70;                // 同排间距；父亲右侧需先让开「本人 + 配偶」两格
+  const rowMax=Math.max(...layers.map(l=>l.length), prow.length, sibC.length+1, 1);
+  const W=Math.max(900, rowMax*sx + spouseGap + 300);
+  const cy=70 + upDepth*90 + h/2;
+  const H=Math.max(420, cy + h/2 + layers.length*90 + 80);
+  const cx=W/2;                             // 上下留白均等，避免整幅内容压在下方
+  const pos={}; pos[m.id]={x:cx-w/2, y:cy-h/2};
   let nodes=coupleNode(c,cx-w/2,cy-h/2,w,h,{},'right');
   let links='';
   // 向上尊亲（每位祖先的妻子同样粉色、在右、重叠一半）
@@ -449,24 +479,48 @@ function renderWu(){
     nodes+=coupleNode(f.id,cx-w/2,upY,w,h,{},'right');
     anc=f; prevBottom=upY; upY-=90;
   }
-  // 向下卑亲
-  function down(id,depth,xoff){ const kids=childrenOf(id); let yy=cy+h/2+90+depth*90;
-    kids.forEach((k,i)=>{ const xx=cx-w/2 + (i-(kids.length-1)/2)*160;
-      nodes+=nodeG(k.id,xx,yy,w,h); links+=`<path class="link" d="M${cx} ${cy+h/2} L${xx+w/2} ${yy}"/>`;
-      down(k.id,depth+1,0);
+  // 向下卑亲：一层一行，行内按人数居中
+  layers.forEach((layer,di)=>{
+    const yy=cy-h/2 + h + 45 + di*90;
+    layer.forEach((k,i)=>{
+      const xx=cx-w/2 + (i-(layer.length-1)/2)*155;
+      pos[k.id]={x:xx, y:yy};
+      nodes+=nodeG(k.id,xx,yy,w,h);
     });
-  }
-  down(c,0,0);
-  // 同代兄弟姐妹
-  siblingsOf(c).forEach((s,i)=>{ const xx=cx-w/2+(i-(siblingsOf(c).length-1)/2)*150; nodes+=nodeG(s.id,xx,cy-h/2,w,h); });
-  // 父之兄弟姐妹（叔伯姑）
-  const f=fatherOf(c); if(f){ siblingsOf(f.id).forEach((s,i)=>{ const xx=cx-w/2+(i-(siblingsOf(f.id).length-1)/2)*150; const yy=cy-h/2-90; nodes+=nodeG(s.id,xx,yy,w,h); }); }
+  });
+  layers.flat().forEach(k=>{
+    const p=(k.fatherId&&pos[k.fatherId])?pos[k.fatherId]:((k.motherId&&pos[k.motherId])?pos[k.motherId]:null);
+    if(p) links+=`<path class="link" d="M${p.x+w/2} ${p.y+h} L${pos[k.id].x+w/2} ${pos[k.id].y}"/>`;
+  });
+  // 同代兄弟姐妹：中心人物自占一格，兄弟依次排在其左侧，绝不覆盖本人
+  sibC.forEach((s,i)=>{ const xx=cx-w/2-(sibC.length-i)*155; nodes+=nodeG(s.id,xx,cy-h/2,w,h); });
+  // 父之兄弟姐妹（叔伯姑）：与父亲同排，按排行左右分布，父亲那一格留空（已由祖先链画）
+  if(prow.length){ const yy=cy-h/2-90;
+    const others=prow.filter(s=>s.id!==fOf.id); const half=Math.ceil(others.length/2);
+    others.forEach((s,i)=>{
+      // 左半放长者、右半放幼者；右侧从「父亲+其配偶」之后起排，避免压住父母
+      const xx = i<half ? cx-w/2-(half-i)*sx : cx-w/2+spouseGap+(i-half)*sx;
+      nodes+=nodeG(s.id,xx,yy,w,h); }); }
   setSVG([],nodes,links,W,H,true);
 }
 /* ============ 注入 SVG ============ */
+let _svgView=null;
 function setSVG(ids,nodes,links,vw,vh,noZoom){
   const defs=`<defs></defs>`;
-  stage.setAttribute('viewBox',`0 0 ${vw} ${vh}`);
+  // viewBox 取容器真实尺寸（1:1 像素），内容靠 transform 平移缩放。
+  // 若把 viewBox 直接设成内容尺寸（吊线谱宽达两万像素），整幅会被压成一条细线。
+  const rect=stage.getBoundingClientRect();
+  const W=Math.max(320,Math.round(rect.width||1200)), H=Math.max(320,Math.round(rect.height||800));
+  stage.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  if(_svgView!==view){                       // 仅切视图时重置视口，点人物不打断用户当前位置
+    _svgView=view;
+    if(noZoom){                       // 五服：整幅缩放并水平垂直居中（五服看的是格局，优先看全）；下限 0.45 保底可读
+      const k=Math.min(1, Math.max(0.45, Math.min(W/(vw+80), H/(vh+60))));
+      transform={x:Math.round(W/2-(vw/2)*k), y:Math.max(56, Math.round((H-vh*k)/2)), k};
+    } else {
+      transform={x:40, y:96, k:Math.min(1, Math.max(0.6, W/vw))};
+    }
+  }
   stage.innerHTML=`<g id="vp" transform="translate(${transform.x},${transform.y}) scale(${transform.k})">${defs}${links}${nodes}</g>`;
   applyTransform();
   stage.querySelectorAll('.node').forEach(g=>g.addEventListener('click',e=>{ e.stopPropagation(); onNodeClick(g.dataset.id); }));
@@ -615,7 +669,7 @@ function doSearch(){
 }
 /* ============ 渲染调度 ============ */
 function render(){ if(view==='tree')renderTree(); else if(view==='diao')renderDiao(); else renderWu(); }
-function switchView(v){ view=v; selected=(v==='wu'&&!selected)?ROOT:selected;
+function switchView(v){ view=v; selected=(v==='wu'&&!selected)?((DATA.selfId&&byId[DATA.selfId])?DATA.selfId:ROOT):selected;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
   document.querySelectorAll('.mt').forEach(t=>t.classList.toggle('on',t.dataset.view===v));
   render(); }
