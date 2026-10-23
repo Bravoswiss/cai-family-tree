@@ -144,6 +144,20 @@
   .modal .flow{background:var(--paper);border:1px dashed var(--line);border-radius:12px;padding:12px;font-size:13px;color:var(--ink-soft);line-height:1.8}
   .modal .acts{display:flex;gap:10px;margin-top:18px}
   .modal .acts .btn{flex:1;text-align:center}
+  /* 申请表单 */
+  .fm{margin-top:6px}
+  .fm label{display:block;font-size:12px;color:var(--ink-soft);margin:12px 0 5px;letter-spacing:.5px}
+  .fm .req{color:var(--seal);font-weight:700}
+  .fm input,.fm select,.fm textarea{width:100%;font-family:inherit;font-size:13px;color:var(--ink);
+    padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--paper);outline:none;box-sizing:border-box}
+  .fm textarea{resize:vertical;line-height:1.6}
+  .fm input:focus,.fm select:focus,.fm textarea:focus{border-color:var(--seal-soft);background:var(--card)}
+  .fm .note{font-size:12px;line-height:1.7;margin-top:12px;display:none;padding:10px 12px;border-radius:10px;
+    background:var(--paper);border:1px dashed var(--line);white-space:pre-wrap;word-break:break-all}
+  .fm .note.show{display:block}
+  .fm .note.ok{border-color:var(--seal-soft);color:var(--seal)}
+  .fm .note.err{border-color:#C9A227;color:#8A6D1F}
+  .fm .btn[disabled]{opacity:.55;cursor:default}
   .dir-h{font-size:12px;color:var(--dai);font-weight:700;margin:12px 0 6px;letter-spacing:1px;border-left:3px solid var(--seal);padding-left:8px}
   /* ===== Mobile bottom tabs ===== */
   .mbar{display:none}
@@ -233,20 +247,42 @@
 <div class="mask" id="mask">
   <div class="modal">
     <h2>申请修改 · 共同维护</h2>
-    <p>本谱由 <b>三位主理人</b> 共同管理，<b>家人仅可阅读，修改需申请</b>。提交申请后，由主理人审核通过并更新数据。</p>
+    <p>本谱由 <b>三位主理人</b> 共同管理，<b>家人仅可阅读，修改需申请</b>。填好提交，主理人审核通过即合并入谱。</p>
     <div class="mgrs" id="mgrList"></div>
-    <div class="flow">
-      ① 填写申请表单（新增 / 更正人物与关系）<br>
-      ② 表单通知三位主理人<br>
-      ③ 任一主理人审核通过，合并入谱并重新发布<br>
-      ④ 微信扫码即可看到更新
+    <form class="fm" id="applyForm">
+      <label>申请类型
+        <select id="fType">
+          <option>更正信息（生卒 / 城市 / 姓名）</option>
+          <option>新增人物</option>
+          <option>补充或修正关系（父母 / 配偶 / 子女）</option>
+          <option>其他</option>
+        </select>
+      </label>
+      <label>涉及人物（在图上点开人物后会自动带入）
+        <input id="fWho" placeholder="如：蔡绍泽（第 2 代）">
+      </label>
+      <label>修改内容 <span class="req">*</span>
+        <textarea id="fBody" rows="3" required placeholder="请写清楚要改成什么，例如：绍泽 1941 年生，现居天津；妻张丽舫，1938 年生"></textarea>
+      </label>
+      <label>你的姓名 <span class="req">*</span>
+        <input id="fName" required placeholder="如：蔡琦冬">
+      </label>
+      <label>你是谱中何人（便于核对身份）
+        <input id="fRel" placeholder="如：绍泽之女">
+      </label>
+      <label>联系方式（微信 / 邮箱，选填）
+        <input id="fContact" placeholder="便于主理人回访核对">
+      </label>
+      <div class="note" id="fNote"></div>
+      <div class="acts">
+        <button type="button" class="btn ghost" id="mClose">关闭</button>
+        <button type="submit" class="btn seal" id="mGo">提交申请</button>
+      </div>
+    </form>
+    <div class="flow" style="margin-top:14px">
+      ① 提交申请 → ② 主理人收到邮件 → ③ 审核通过，合并入谱并重新发布 → ④ 扫码即可看到更新
     </div>
-    <p style="margin-top:14px">申请表单（示例链接，可替换为腾讯问卷 / 腾讯文档）：</p>
-    <p><a href="#" id="formLink" style="color:var(--seal);word-break:break-all">https://forms.example.com/chen-family</a></p>
-    <div class="acts">
-      <button class="btn ghost" id="mClose">关闭</button>
-      <button class="btn seal" id="mGo">去填写</button>
-    </div>
+    <p id="extForm" style="display:none;margin-top:10px">也可在外部表单填写：<a id="formLink" href="#" target="_blank" rel="noopener" style="color:var(--seal);word-break:break-all"></a></p>
   </div>
 </div>
 
@@ -724,11 +760,61 @@ function switchView(v){ view=v; selected=(v==='wu'&&!selected)?((DATA.selfId&&by
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
   document.querySelectorAll('.mt').forEach(t=>t.classList.toggle('on',t.dataset.view===v));
   render(); }
-/* ============ 申请弹层 ============ */
+/* ============ 申请弹层（站内表单 → Formspree）============
+   已配置 formEndpoint：表单直接 POST 到 Formspree，主理人邮箱收到通知。
+   未配置（留空）：降级为「一键复制申请文本」，家人贴到家庭群或发给主理人同样可用，
+   因此站点在拿到端点之前也不会是死链。 */
+function applyNote(msg,cls){ const n=document.getElementById('fNote');
+  n.textContent=msg||''; n.className='note'+(msg?' show':'')+(cls?' '+cls:''); }
+function applyText(){
+  const g=id=>document.getElementById(id).value.trim();
+  const who=g('fWho')||'（未指定）';
+  return `【${DATA.surname}氏宗谱 · 修改申请】\n类型：${g('fType')}\n涉及人物：${who}\n修改内容：${g('fBody')}\n申请人：${g('fName')}\n与谱中人物关系：${g('fRel')||'（未填）'}\n联系方式：${g('fContact')||'（未填）'}`;
+}
+function copyText(t){
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(t); }catch(e){}
+  return new Promise((res,rej)=>{ const ta=document.createElement('textarea'); ta.value=t;
+    ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
+    const ok=document.execCommand&&document.execCommand('copy'); document.body.removeChild(ta); ok?res():rej(new Error('copy-failed')); });
+}
 function openApply(){ const ml=document.getElementById('mgrList');
   ml.innerHTML=DATA.managers.map(m=>`<div class="mgr"><div class="mk">${m.k}</div><div class="mn">${m.n}</div><div class="mr">${m.r}</div></div>`).join('');
-  document.getElementById('formLink').textContent=DATA.formUrl;
+  // 若当前正看着某位人物，自动带入其姓名与世代，省得家人再手打
+  const w=document.getElementById('fWho');
+  if(selected&&byId[selected]&&!w.value){ const m=byId[selected];
+    w.value=`${(m.surname&&m.given)?m.surname+m.given:m.name}（第 ${m.gen} 代）`; }
+  const ext=document.getElementById('extForm');
+  if(ext){ ext.style.display=DATA.formUrl?'block':'none';
+    const a=document.getElementById('formLink'); if(a&&DATA.formUrl){ a.href=DATA.formUrl; a.textContent=DATA.formUrl; } }
+  applyNote('');
   document.getElementById('mask').classList.add('show'); }
+document.getElementById('applyForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=document.getElementById('mGo'), body=document.getElementById('fBody').value.trim(), nm=document.getElementById('fName').value.trim();
+  if(!body||!nm){ applyNote('请把「修改内容」和「你的姓名」填完整，主理人才好核对。','err'); return; }
+  const payload={ _subject:`【${DATA.surname}氏宗谱】修改申请 · ${document.getElementById('fWho').value.trim()||'未指定人物'}`,
+    类型:document.getElementById('fType').value, 涉及人物:document.getElementById('fWho').value.trim(),
+    修改内容:body, 申请人:nm, 与谱中人物关系:document.getElementById('fRel').value.trim(),
+    联系方式:document.getElementById('fContact').value.trim(), 提交时间:new Date().toLocaleString('zh-CN') };
+  const ep=(DATA.formEndpoint||'').trim();
+  if(!ep){ // 未配置端点：复制申请文本，走微信群这条零依赖的通道
+    try{ await copyText(applyText());
+      applyNote('在线表单尚未开通。申请内容已复制到剪贴板，请粘贴到家庭微信群、或直接发给主理人即可。','ok'); }
+    catch(err){ applyNote('复制失败，请手动抄写下方的申请内容发给主理人：\n\n'+applyText(),'err'); }
+    return; }
+  btn.disabled=true; const old=btn.textContent; btn.textContent='提交中…'; applyNote('正在提交，请稍候…');
+  try{
+    const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    applyNote('已提交，主理人会收到邮件并审核。审核通过后重新发布，扫码即可看到更新。','ok');
+    ['fBody','fName','fRel','fContact'].forEach(i=>document.getElementById(i).value='');
+  }  catch(err){
+    let msg='提交失败（'+err.message+'）。';
+    try{ await copyText(applyText()); msg+='申请内容已复制到剪贴板，可粘贴到家庭群或发给主理人。'; }
+    catch(e2){ msg+='请手动抄写申请内容发给主理人：\n\n'+applyText(); }
+    applyNote(msg,'err');
+  }finally{ btn.disabled=false; btn.textContent=old; }
+});
 /* ============ 人员目录（旁系/外家） ============ */
 function openDir(){
   const wrap=document.getElementById('dirList');
@@ -765,7 +851,6 @@ document.getElementById('cityIn').addEventListener('keydown',e=>{if(e.key==='Ent
 document.getElementById('applyBtn').onclick=openApply;
 document.getElementById('actApply').onclick=openApply;
 document.getElementById('mClose').onclick=()=>document.getElementById('mask').classList.remove('show');
-document.getElementById('mGo').onclick=()=>window.open(DATA.formUrl,'_blank');
 document.getElementById('actWu').onclick=()=>switchView('wu');
 document.getElementById('actRel').onclick=()=>{ if(!selected){alert('请先在图中点选一位人物');return;} toggleRel(); relA=selected; document.getElementById('rbA').textContent=byId[selected].name; document.getElementById('rbA').classList.add('set'); };
 document.getElementById('rbClose').onclick=toggleRel;

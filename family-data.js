@@ -15,13 +15,19 @@ const FAMILY_CONFIG = {
     { n: "主理人·（待补充）", r: "二房代表", k: "🧑‍💼" },
     { n: "主理人·（待补充）", r: "晚辈代表", k: "🧑‍🎓" }
   ],
-  formUrl: "https://forms.example.com/your-family" // 申请修改表单（换成你的腾讯问卷/腾讯文档链接）
+  /* 申请修改：站内表单直投 Formspree（免费版 50 条/月，无需国内手机号）。
+     拿到端点后把下面换成 https://formspree.io/f/xxxxxxxx 即可；
+     留空时站点自动降级为「生成申请文本并复制」，家人贴到家庭群也能用。 */
+  formEndpoint: "",
+  /* 备用：若另有外部问卷/表单，填这里，弹窗会多一个「去外部表单填写」按钮 */
+  formUrl: ""
 };
 
 const DATA = {
   surname: FAMILY_CONFIG.surname,
   selfId: FAMILY_CONFIG.selfId,
   managers: FAMILY_CONFIG.managers,
+  formEndpoint: FAMILY_CONFIG.formEndpoint,
   formUrl: FAMILY_CONFIG.formUrl,
   members: FAMILY_MEMBERS
 };
