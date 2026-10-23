@@ -43,6 +43,7 @@ const FAMILY_MEMBERS = [
     "gender": "M",
     "given": "绍泽",
     "birth": 1940,
+    "birthOrder": 8,
     "city": "天津",
     "fatherId": "I500004",
     "motherId": "I500005",
@@ -52,7 +53,8 @@ const FAMILY_MEMBERS = [
         "type": "原配"
       }
     ],
-    "clan": "cai"
+    "clan": "cai",
+    "note": "八子（大排行第八，幼子）· 妻张丽舫；子女 琦冬、琦佳"
   },
   {
     "id": "I500004",
@@ -100,6 +102,7 @@ const FAMILY_MEMBERS = [
     "gender": "M",
     "given": "绍英",
     "deceased": true,
+    "birthOrder": 1,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500111",
@@ -109,7 +112,8 @@ const FAMILY_MEMBERS = [
         "type": "原配"
       }
     ],
-    "clan": "cai"
+    "clan": "cai",
+    "note": "大伯 · 长子（大排行第一）"
   },
   {
     "id": "I500007",
@@ -410,6 +414,7 @@ const FAMILY_MEMBERS = [
     "gender": "M",
     "given": "绍寿",
     "deceased": true,
+    "birthOrder": 2,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500111",
@@ -420,7 +425,7 @@ const FAMILY_MEMBERS = [
       }
     ],
     "clan": "cai",
-    "note": "二伯 · 生子一（汉彬）、生女四（丽霞/丽菲/丽雯/丽娟）"
+    "note": "二伯 · 大排行第二 · 生子一（汉彬）、生女四（丽霞/丽菲/丽雯/丽娟）"
   },
   {
     "id": "I500031",
@@ -428,6 +433,7 @@ const FAMILY_MEMBERS = [
     "surname": "蔡",
     "gender": "M",
     "given": "绍序",
+    "birthOrder": 3,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500111",
@@ -438,7 +444,7 @@ const FAMILY_MEMBERS = [
       }
     ],
     "clan": "cai",
-    "note": "三伯 · 一子台生"
+    "note": "三伯 · 大排行第三 · 一子台生"
   },
   {
     "id": "I500032",
@@ -446,6 +452,7 @@ const FAMILY_MEMBERS = [
     "surname": "蔡",
     "gender": "M",
     "given": "绍海",
+    "birthOrder": 4,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500111",
@@ -456,13 +463,14 @@ const FAMILY_MEMBERS = [
       }
     ],
     "clan": "cai",
-    "note": "四伯 · 子汉涛，女岱玲、晓玲"
+    "note": "四伯 · 大排行第四 · 子汉涛，女岱玲、晓玲"
   },
   {
     "id": "I500033",
     "name": "六伯 蔡",
     "surname": "蔡",
     "gender": "M",
+    "birthOrder": 6,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500005",
@@ -473,7 +481,7 @@ const FAMILY_MEMBERS = [
       }
     ],
     "clan": "cai",
-    "note": "六伯 · 名字待考（世系谱仅记排行「六」）"
+    "note": "六伯 · 大排行第六 · 名字待考（世系谱仅记排行「六」）"
   },
   {
     "id": "I500034",
@@ -481,6 +489,7 @@ const FAMILY_MEMBERS = [
     "surname": "蔡",
     "gender": "M",
     "given": "绍礼",
+    "birthOrder": 7,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500005",
@@ -491,13 +500,14 @@ const FAMILY_MEMBERS = [
       }
     ],
     "clan": "cai",
-    "note": "七伯 · 配偶许淑娜（MyHeritage）；手写谱另记「徐清卿」，待考"
+    "note": "七伯 · 大排行第七 · 配偶许淑娜（MyHeritage）；手写谱另记「徐清卿」，待考"
   },
   {
     "id": "I500035",
     "name": "大姑 蔡",
     "surname": "蔡",
     "gender": "F",
+    "birthOrder": 91,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500111",
@@ -509,6 +519,7 @@ const FAMILY_MEMBERS = [
     "name": "二姑 蔡",
     "surname": "蔡",
     "gender": "F",
+    "birthOrder": 92,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500111",
@@ -526,6 +537,7 @@ const FAMILY_MEMBERS = [
     "name": "三姑 蔡",
     "surname": "蔡",
     "gender": "F",
+    "birthOrder": 93,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500005",
@@ -545,6 +557,7 @@ const FAMILY_MEMBERS = [
     "gender": "F",
     "given": "绍慧",
     "deceased": true,
+    "birthOrder": 94,
     "city": "不详",
     "fatherId": "I500004",
     "motherId": "I500005",
@@ -563,6 +576,7 @@ const FAMILY_MEMBERS = [
     "surname": "蔡",
     "gender": "F",
     "given": "绍华",
+    "birthOrder": 95,
     "city": "汕头",
     "fatherId": "I500004",
     "motherId": "I500005",

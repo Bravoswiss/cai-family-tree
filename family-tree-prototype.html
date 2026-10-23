@@ -289,7 +289,12 @@ function isAlive(m){ return !(m.death || m.deceased); }
 const ROOT = (DATA.members.find(m=>!m.fatherId && !m.orphan && m.gender==='M')||{id:'I500004'}).id;
 /* 子女＝「父是谁」或「母是谁」都算：蔡氏女儿招婿/外嫁后，子女的 fatherId 是外姓丈夫，
    只看 fatherId 会让整支后人挂空、上不了图。 */
-function childrenOf(id){ return DATA.members.filter(m=>m.fatherId===id||m.motherId===id); }
+/* 长幼有序：子女一律按「大排行」birthOrder 排（儿子 1..n，女儿 91..n）；
+   没有排行的按原数据次序排在其后（sort 稳定，不打乱既有顺序）。
+   否则 GEDCOM 的导出次序会让幼子（如八子绍泽）排到兄长前面。 */
+function birthRank(m){ return typeof m.birthOrder==='number' ? m.birthOrder : 999; }
+function childrenOf(id){ return DATA.members.filter(m=>m.fatherId===id||m.motherId===id)
+  .sort((a,b)=>birthRank(a)-birthRank(b)); }
 function spousesOf(id){ const m=byId[id];
   // 原配在前、继配在后：详情卡「直系家庭」与图中重叠顺序都按这个次序
   return (m.spouses||[]).map(s=>({ref:byId[s.id],type:s.type}))
