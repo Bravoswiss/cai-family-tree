@@ -247,7 +247,7 @@
 <div class="mask" id="mask">
   <div class="modal">
     <h2>申请修改 · 共同维护</h2>
-    <p>本谱由 <b>三位主理人</b> 共同管理，<b>家人仅可阅读，修改需申请</b>。填好提交，主理人审核通过即合并入谱。</p>
+    <p>本谱由 <b>维护人</b> 统一维护：<b>家人可自由阅读，改谱需提交申请</b>。填好提交，维护人审核后手动更新并重新发布。</p>
     <div class="mgrs" id="mgrList"></div>
     <form class="fm" id="applyForm">
       <label>申请类型
@@ -271,7 +271,7 @@
         <input id="fRel" placeholder="如：绍泽之女">
       </label>
       <label>联系方式（微信 / 邮箱，选填）
-        <input id="fContact" placeholder="便于主理人回访核对">
+        <input id="fContact" placeholder="便于维护人回访核对">
       </label>
       <div class="note" id="fNote"></div>
       <div class="acts">
@@ -280,7 +280,7 @@
       </div>
     </form>
     <div class="flow" style="margin-top:14px">
-      ① 提交申请 → ② 主理人收到邮件 → ③ 审核通过，合并入谱并重新发布 → ④ 扫码即可看到更新
+      ① 提交申请 → ② 维护人收到邮件 → ③ 审核后合并入谱并重新发布 → ④ 扫码即可看到更新
     </div>
     <p id="extForm" style="display:none;margin-top:10px">也可在外部表单填写：<a id="formLink" href="#" target="_blank" rel="noopener" style="color:var(--seal);word-break:break-all"></a></p>
   </div>
@@ -761,8 +761,8 @@ function switchView(v){ view=v; selected=(v==='wu'&&!selected)?((DATA.selfId&&by
   document.querySelectorAll('.mt').forEach(t=>t.classList.toggle('on',t.dataset.view===v));
   render(); }
 /* ============ 申请弹层（站内表单 → Formspree）============
-   已配置 formEndpoint：表单直接 POST 到 Formspree，主理人邮箱收到通知。
-   未配置（留空）：降级为「一键复制申请文本」，家人贴到家庭群或发给主理人同样可用，
+   已配置 formEndpoint：表单直接 POST 到 Formspree，维护人邮箱收到通知。
+   未配置（留空）：降级为「一键复制申请文本」，家人贴到家庭群或发给维护人同样可用，
    因此站点在拿到端点之前也不会是死链。 */
 function applyNote(msg,cls){ const n=document.getElementById('fNote');
   n.textContent=msg||''; n.className='note'+(msg?' show':'')+(cls?' '+cls:''); }
@@ -791,7 +791,7 @@ function openApply(){ const ml=document.getElementById('mgrList');
 document.getElementById('applyForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const btn=document.getElementById('mGo'), body=document.getElementById('fBody').value.trim(), nm=document.getElementById('fName').value.trim();
-  if(!body||!nm){ applyNote('请把「修改内容」和「你的姓名」填完整，主理人才好核对。','err'); return; }
+  if(!body||!nm){ applyNote('请把「修改内容」和「你的姓名」填完整，维护人才好核对。','err'); return; }
   const payload={ _subject:`【${DATA.surname}氏宗谱】修改申请 · ${document.getElementById('fWho').value.trim()||'未指定人物'}`,
     类型:document.getElementById('fType').value, 涉及人物:document.getElementById('fWho').value.trim(),
     修改内容:body, 申请人:nm, 与谱中人物关系:document.getElementById('fRel').value.trim(),
@@ -799,19 +799,19 @@ document.getElementById('applyForm').addEventListener('submit',async e=>{
   const ep=(DATA.formEndpoint||'').trim();
   if(!ep){ // 未配置端点：复制申请文本，走微信群这条零依赖的通道
     try{ await copyText(applyText());
-      applyNote('在线表单尚未开通。申请内容已复制到剪贴板，请粘贴到家庭微信群、或直接发给主理人即可。','ok'); }
-    catch(err){ applyNote('复制失败，请手动抄写下方的申请内容发给主理人：\n\n'+applyText(),'err'); }
+      applyNote('在线表单尚未开通。申请内容已复制到剪贴板，请粘贴到家庭微信群、或直接发给维护人即可。','ok'); }
+    catch(err){ applyNote('复制失败，请手动抄写下方的申请内容发给维护人：\n\n'+applyText(),'err'); }
     return; }
   btn.disabled=true; const old=btn.textContent; btn.textContent='提交中…'; applyNote('正在提交，请稍候…');
   try{
     const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload)});
     if(!r.ok) throw new Error('HTTP '+r.status);
-    applyNote('已提交，主理人会收到邮件并审核。审核通过后重新发布，扫码即可看到更新。','ok');
+    applyNote('已提交，维护人会收到邮件并审核。审核通过后重新发布，扫码即可看到更新。','ok');
     ['fBody','fName','fRel','fContact'].forEach(i=>document.getElementById(i).value='');
   }  catch(err){
     let msg='提交失败（'+err.message+'）。';
-    try{ await copyText(applyText()); msg+='申请内容已复制到剪贴板，可粘贴到家庭群或发给主理人。'; }
-    catch(e2){ msg+='请手动抄写申请内容发给主理人：\n\n'+applyText(); }
+    try{ await copyText(applyText()); msg+='申请内容已复制到剪贴板，可粘贴到家庭群或发给维护人。'; }
+    catch(e2){ msg+='请手动抄写申请内容发给维护人：\n\n'+applyText(); }
     applyNote(msg,'err');
   }finally{ btn.disabled=false; btn.textContent=old; }
 });
