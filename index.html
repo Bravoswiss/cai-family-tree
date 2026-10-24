@@ -354,14 +354,19 @@ const maxGen = Math.max(...DATA.members.map(m=>m.gen));
 /* ============ 状态 ============ */
 const stage=document.getElementById('stage');
 let view='tree', selected=null, transform={x:40,y:40,k:1};
-let relMode=false, relA=null, relB=null, searchSet=new Set();
+let relMode=false, relA=null, relB=null, searchSet=new Set(), hintDismissed=false;
+// 提示行：打开页面时显示；一旦用户开始操作（缩放/平移/点人物）即隐藏，不再遮挡视线。
+// 关系推导模式下由 toggleRel 接管提示，故此时 hideHint 主动让位。
+function hideHint(){ if(relMode)return; const g=document.getElementById('getip'); if(g)g.style.display='none'; hintDismissed=true; }
 
 /* ============ 折叠（精简 / 全谱）============
    112 人一次铺开，手机上得缩到看不清，线也拉得老长。
    默认「精简」：只展开根往下 collapseDepth 代，其余各支收成一个「＋N 人」的牌，
    点一下展开该支；顶部按钮可一键切「全谱」。人不会少，只是先不摊开。 */
 let collapseDepth=2;                       // 0=根；2 → 默认展开到第三代
-let showAll=(window.innerWidth||1280)>=760; // 电脑上默认全谱，手机上默认精简
+let showAll=(window.innerWidth||1280)>=760; // 树状：电脑上默认全谱，手机上默认精简
+let diaoShowAll=false;                       // 吊线：恒为「精简」默认。横向铺开 112 人≈11000px 缩到看不清，
+                                            // 故吊线默认只展 始祖＋子辈两房（带房标签），孙辈收成「＋N 人」。
 let collapsedSet=new Set();                 // 手动收起的支
 let openedSet=new Set();                    // 手动展开的支
 const _descN={};
@@ -536,7 +541,8 @@ function renderDiao(){
   const roots=DATA.members.filter(m=>!m.fatherId && m.gender==='M' && !m.orphan);
   // xGap 需容纳「本人 + 两位妻子」：第一任重叠半格、第二任再后移一格，
   // w=140 时第二任妻子右缘 = x+0.5w+2w = x+350，故列距取 400 防止压到下一列
-  const xGap=400,yGap=120,w=140,h=54; let order=0;
+  const narrow=isNarrow();
+  const xGap=narrow?300:400, yGap=narrow?92:120, w=narrow?120:140, h=narrow?46:54; let order=0;
   // 吊线谱同样全员上图：蔡氏主干 + 女儿/儿子所出的外姓后人，
   // 配偶（含外姓女婿/媳妇）以粉色配偶身份贴在本人右侧，不另占一列。
   const rootId=(function(){ const r=DATA.members.find(m=>!m.fatherId&&!m.motherId&&m.clan==='cai'); return r?r.id:ROOT; })();
@@ -544,31 +550,85 @@ function renderDiao(){
     DATA.members.forEach(c=>{ if(c.fatherId===id||c.motherId===id) w(c.id); }); })(rootId);
   const drawn=DATA.members.filter(m=>primary.has(m.id));
   const drawIds=primary;
+  const visible=[];            // 真正分到列号、要绘制的节点（折叠支的后代不在其中）
+  const wifeRankFor=(id,mid)=>{ const sp=(byId[id].spouses||[]).find(s=>s.id===mid); return sp?(sp.type==='原配'?0:sp.type==='继配'?1:2):2; };
+  // 吊线同样用「精简/全谱」：11000px 的横卷在手机/电脑上都没法看。
+  // 精简时只展开始祖与子辈（gen1、gen2），孙辈以下收成「＋N 人 · 展开」。
+  // 吊线有独立开关 diaoShowAll（恒默认精简），不与树状的全谱状态打架。
+  function diaoFolded(id){
+    if(!childrenOf(id).length) return false;
+    if(collapsedSet.has(id)) return true;
+    if(diaoShowAll) return false;
+    if(openedSet.has(id)) return false;
+    return (byId[id].gen-1) >= 1;
+  }
   function assign(id){
     // 只给「主干」分配列号；随外姓的血脉末梢其子女是外姓，自然成为叶子
-    const kids=childrenOf(id).filter(c=>drawIds.has(c.id));
-    if(kids.length===0){ byId[id]._ox=order++; }
-    else{ kids.forEach(k=>assign(k.id)); byId[id]._ox=(byId[kids[0].id]._ox+byId[kids[kids.length-1].id]._ox)/2; }
+    const folded=diaoFolded(id); byId[id]._diaoFold=folded;
+    const kids=folded?[]:childrenOf(id).filter(c=>drawIds.has(c.id));
+    if(kids.length===0){ byId[id]._ox=order++; visible.push(byId[id]); return; }
+    // 多母分组：原配房在前、继配房在后，房内按大排行；保证同妻子女连成一片（与树状一致）
+    const groups=new Map();
+    kids.forEach(c=>{ const k=c.motherId||'__none__'; if(!groups.has(k))groups.set(k,[]); groups.get(k).push(c); });
+    let garr=[...groups.values()];
+    if(garr.length>1) garr.sort((a,b)=>wifeRankFor(id,a[0].motherId)-wifeRankFor(id,b[0].motherId));
+    garr.forEach(g=>g.forEach(k=>assign(k.id)));
+    const first=garr[0][0], last=garr[garr.length-1][garr[garr.length-1].length-1];
+    byId[id]._ox=(byId[first.id]._ox+byId[last.id]._ox)/2;
+    visible.push(byId[id]);
   }
   roots.forEach(r=>assign(r.id));
+  const maxVisGen=visible.reduce((a,m)=>Math.max(a,m.gen),1);   // 实际绘制到的最深一代（精简时更浅）
   // 每列按实际需要的宽度排布：只有一位配偶的列窄，双妻的列才留宽，
   // 避免 80 余人一字排开、整幅被缩到看不清。
   const colNeed=[];
-  drawn.forEach(m=>{ const c=Math.round(m._ox); const n=spousesOf(m.id).filter(s=>s.ref).length;
+  visible.forEach(m=>{ const c=Math.round(m._ox); const n=spousesOf(m.id).filter(s=>s.ref).length;
     const need = n>=2 ? w*2.4+70 : (n===1 ? w*1.6+55 : w+55);
     colNeed[c]=Math.max(colNeed[c]||0, need); });
   const colX=[]; let acc=70;
   for(let i=0;i<order;i++){ colX[i]=acc; acc+=(colNeed[i]||260); }
   const totalW=acc+80;
-  let links='',nodes='';
-  drawn.forEach(m=>{
+  let links='',nodes='',ties='',roomLabels='',folds='';
+  visible.forEach(m=>{
     const x=colX[Math.round(m._ox)], y=(m.gen-1)*yGap;
-    childrenOf(m.id).filter(c=>drawIds.has(c.id)).forEach(c=>{ const cx=colX[Math.round(byId[c.id]._ox)], cy=(byId[c.id].gen-1)*yGap;
+    const kids=byId[m.id]._diaoFold?[]:childrenOf(m.id).filter(c=>drawIds.has(c.id));
+    kids.forEach(c=>{ const cx=colX[Math.round(byId[c.id]._ox)], cy=(byId[c.id].gen-1)*yGap;
       links+=`<path class="link" d="M${x+w/2} ${y+h} L${x+w/2} ${y+h+22} L${cx+w/2} ${y+h+22} L${cx+w/2} ${cy}"/>`; });
     nodes+=coupleNode(m.id,x,y,w,h,{},'right');
+    // 折叠的支：本节点照常显示，后代收成「＋N 人 · 展开」牌
+    if(byId[m.id]._diaoFold){ const n=descCount(m.id), sw=Math.min(w*0.82,116);
+      links+=`<path class="link" d="M${x+w/2} ${y+h} L${x+w/2} ${y+h+12}"/>`;
+      folds+=foldStub(m.id, x+(w-sw)/2, y+h+14, sw, 26, n); }
+    // 多妻：按母亲分组，画「X 所出·N人」房标签 + 婚姻虚线（与树状一致）
+    if(kids.length){
+      const groups=new Map();
+      kids.forEach(c=>{ const k=c.motherId||'__none__'; if(!groups.has(k))groups.set(k,[]); groups.get(k).push(c); });
+      let garr=[...groups.values()];
+      if(garr.length>1){
+        garr.sort((a,b)=>wifeRankFor(m.id,a[0].motherId)-wifeRankFor(m.id,b[0].motherId));
+        const deepY=(maxVisGen-1)*yGap+h+24;   // 分界线只画到实际最深的一行
+        let prevRight=null;
+        garr.forEach(g=>{
+          const rows=g.map(c=>byId[c.id]);
+          const minOx=Math.min.apply(null,rows.map(c=>c._ox)), maxOx=Math.max.apply(null,rows.map(c=>c._ox));
+          const bx0=colX[Math.round(minOx)], bx1=colX[Math.round(maxOx)]+w;
+          // 房分界线：与上一房之间一道竖虚线，左右滚动时也一眼看出「换了一房」
+          if(prevRight!=null){ const dx=(prevRight+bx0)/2;
+            ties+=`<path class="tie" d="M${dx} ${y+h+6} V${deepY}"/>`; }
+          prevRight=bx1;
+          const momId=g[0].motherId; const momName=(momId&&byId[momId])?byId[momId].name.replace(/\s+$/,''):'妻';
+          const label=`${momName} 所出 · ${g.length} 人`;
+          const lw=label.length*12+18, ly=y+yGap-h/2-14;
+          const lx=bx0+lw/2+4;   // 靠房首（第一位子女）对齐：滚动时先遇房名，再依次是本房子女
+          roomLabels+=`<g><rect x="${lx-lw/2}" y="${ly-13}" width="${lw}" height="26" rx="13" fill="#FBF1DC" stroke="#A9852F" stroke-width="1"/>`
+            +`<text x="${lx}" y="${ly+4}" text-anchor="middle" font-size="12" font-weight="700" fill="#8A6A1F">${label}</text></g>`;
+          ties+=`<path class="tie" d="M${x+w/2} ${y+h} V${ly-16} H${lx}"/>`;
+        });
+      }
+    }
   });
   const r0=byId[rootId]; window.__diaoAnchor={x:(colX[Math.round(r0._ox)]||0)+w/2, y:40};
-  setSVG(drawn.map(m=>m.id),nodes,links,totalW,yGap*maxGen+60);
+  setSVG(visible.map(m=>m.id),roomLabels+nodes+folds,ties+links,totalW,yGap*maxVisGen+60);
 }
 /* ============ 五服视图（以选中人为中心） ============ */
 function renderWu(){
@@ -660,6 +720,7 @@ function setSVG(ids,nodes,links,vw,vh,noZoom){
 }
 /* ============ 点击节点 ============ */
 function onNodeClick(id){
+  hideHint();
   if(relMode){ if(!relA){relA=id;document.getElementById('rbA').textContent=byId[id].name;document.getElementById('rbA').classList.add('set');}
     else if(!relB&&id!==relA){relB=id;document.getElementById('rbB').textContent=byId[id].name;document.getElementById('rbB').classList.add('set');calcRel();}
     return; }
@@ -808,7 +869,7 @@ function render(){ if(view==='tree')renderTree(); else if(view==='diao')renderDi
 function switchView(v){ view=v; selected=(v==='wu'&&!selected)?((DATA.selfId&&byId[DATA.selfId])?DATA.selfId:ROOT):selected;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
   document.querySelectorAll('.mt').forEach(t=>t.classList.toggle('on',t.dataset.view===v));
-  render(); }
+  syncFoldBtn(); render(); }
 /* ============ 申请弹层（站内表单 → Formspree）============
    已配置 formEndpoint：表单直接 POST 到 Formspree，维护人邮箱收到通知。
    未配置（留空）：降级为「一键复制申请文本」，家人贴到家庭群或发给维护人同样可用，
@@ -888,7 +949,7 @@ function toggleRel(){ relMode=!relMode; relA=relB=null; searchSet=new Set();
   document.getElementById('rbA').classList.remove('set'); document.getElementById('rbB').classList.remove('set');
   document.getElementById('rbA').textContent='选甲'; document.getElementById('rbB').textContent='选乙'; document.getElementById('rbRes').textContent='—';
   if(relMode){ document.getElementById('getip').textContent='关系推导：依次点击两位人物'; document.getElementById('getip').style.display='block'; }
-  else { document.getElementById('getip').textContent='提示：滚轮缩放 · 拖拽平移 · 点击人物查看详情'; }
+  else { document.getElementById('getip').style.display='none'; }
   render(); }
 /* ============ 事件绑定 ============ */
 document.getElementById('tabs').addEventListener('click',e=>{ if(e.target.dataset.view)switchView(e.target.dataset.view); });
@@ -899,25 +960,35 @@ document.getElementById('searchBtn').onclick=doSearch;
 document.getElementById('cityIn').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
 document.getElementById('applyBtn').onclick=openApply;
 document.getElementById('actApply').onclick=openApply;
-/* 全谱 / 精简：手机上默认精简（只展开前几代，其余收成「＋N 人」卡片）；点此一键切换 */
+/* 全谱 / 精简：树状默认状态见 showAll（电脑全谱/手机精简）；吊线恒默认精简（见 diaoShowAll）。
+   按钮跟随当前视图：切到吊线显示吊线的折叠状态，五服视图无折叠概念则隐藏此按钮。 */
 const foldBtn=document.getElementById('foldBtn');
-function syncFoldBtn(){ foldBtn.textContent = showAll ? '精简' : '全谱'; }
-foldBtn.onclick=()=>{ showAll=!showAll; if(showAll){ collapsedSet.clear(); openedSet.clear(); } syncFoldBtn(); render(); };
+function curFoldAll(){ return view==='diao' ? diaoShowAll : showAll; }
+function syncFoldBtn(){
+  if(view==='wu'){ foldBtn.style.display='none'; return; }   // 五服是局部视图，不适用全谱/精简
+  foldBtn.style.display='';
+  foldBtn.textContent = curFoldAll() ? '精简' : '全谱';
+}
+foldBtn.onclick=()=>{
+  if(view==='diao'){ diaoShowAll=!diaoShowAll; if(diaoShowAll){ collapsedSet.clear(); openedSet.clear(); } }
+  else { showAll=!showAll; if(showAll){ collapsedSet.clear(); openedSet.clear(); } }
+  syncFoldBtn(); render();
+};
 syncFoldBtn();
 document.getElementById('mClose').onclick=()=>document.getElementById('mask').classList.remove('show');
 document.getElementById('actWu').onclick=()=>switchView('wu');
 document.getElementById('actRel').onclick=()=>{ if(!selected){alert('请先在图中点选一位人物');return;} toggleRel(); relA=selected; document.getElementById('rbA').textContent=byId[selected].name; document.getElementById('rbA').classList.add('set'); };
 document.getElementById('rbClose').onclick=toggleRel;
-stage.addEventListener('click',()=>{ if(!relMode){document.getElementById('panel').classList.remove('open');selected=null;render();} });
+stage.addEventListener('click',()=>{ if(!relMode){ hideHint(); document.getElementById('panel').classList.remove('open');selected=null;render(); } });
 // 缩放平移
-stage.addEventListener('wheel',e=>{ e.preventDefault(); const f=e.deltaY<0?1.12:0.89; transform.k=Math.min(2.4,Math.max(0.35,transform.k*f)); applyTransform(); },{passive:false});
+stage.addEventListener('wheel',e=>{ e.preventDefault(); hideHint(); const f=e.deltaY<0?1.12:0.89; transform.k=Math.min(2.4,Math.max(0.35,transform.k*f)); applyTransform(); },{passive:false});
 let drag=null;
-stage.addEventListener('mousedown',e=>{ if(e.target.closest('.node'))return; drag={x:e.clientX,y:e.clientY,tx:transform.x,ty:transform.y}; });
+stage.addEventListener('mousedown',e=>{ hideHint(); if(e.target.closest('.node'))return; drag={x:e.clientX,y:e.clientY,tx:transform.x,ty:transform.y}; });
 window.addEventListener('mousemove',e=>{ if(!drag)return; transform.x=drag.tx+(e.clientX-drag.x); transform.y=drag.ty+(e.clientY-drag.y); applyTransform(); });
 window.addEventListener('mouseup',()=>drag=null);
 // 移动端触摸平移（简易）
 let t0=null;
-stage.addEventListener('touchstart',e=>{ if(e.target.closest('.node'))return; const t=e.touches[0]; t0={x:t.clientX,y:t.clientY,tx:transform.x,ty:transform.y}; },{passive:true});
+stage.addEventListener('touchstart',e=>{ hideHint(); if(e.target.closest('.node'))return; const t=e.touches[0]; t0={x:t.clientX,y:t.clientY,tx:transform.x,ty:transform.y}; },{passive:true});
 stage.addEventListener('touchmove',e=>{ if(!t0)return; const t=e.touches[0]; transform.x=t0.tx+(t.clientX-t0.x); transform.y=t0.ty+(t.clientY-t0.y); applyTransform(); },{passive:true});
 stage.addEventListener('touchend',()=>t0=null);
 // 初始化代下拉
